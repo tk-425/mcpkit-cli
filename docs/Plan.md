@@ -33,7 +33,7 @@ Submit
 - If `.mcp.json` exists: prompt to merge or overwrite
 
 ### `mcpkit add`
-Add new MCP server configuration to the local registry.
+Add new MCP server configuration to the project's `.mcp.json`.
 
 ```bash
 $ mcpkit add
@@ -47,14 +47,15 @@ Paste MCP server configuration (name + config):
     ]
 }
 
-✓ Added "playwright" to registry (~/.mcpkit/mcp-servers.json)
+✓ Added "playwright" to .mcp.json
 ```
 
 **Behavior:**
 - Accepts JSON paste (with or without outer braces)
 - Validates JSON syntax
 - Extracts server name (key) and config (value)
-- Stores in `~/.mcpkit/mcp-servers.json`
+- Adds to `.mcp.json` in current directory
+- Creates `.mcp.json` if it doesn't exist
 - Handles duplicates: prompt to overwrite or cancel
 
 ### `mcpkit list`
@@ -76,10 +77,50 @@ Total: 3 servers
 - Filter by name pattern
 
 ### `mcpkit remove`
-Remove MCP server(s) from the local registry.
+Remove MCP server(s) from project's `.mcp.json`.
 
 ```bash
 $ mcpkit remove playwright
+
+✓ Removed "playwright" from .mcp.json
+```
+
+**Behavior:**
+- Removes server from `.mcp.json` in current directory
+- Does NOT remove from registry (`~/.mcpkit/mcp-servers.json`)
+- Error if `.mcp.json` doesn't exist
+- Error if server name not found in `.mcp.json`
+
+### `mcpkit registry add`
+Add new MCP server configuration to the local registry.
+
+```bash
+$ mcpkit registry add
+
+Paste MCP server configuration (name + config):
+
+"playwright": {
+    "command": "npx",
+    "args": [
+        "@playwright/mcp@latest"
+    ]
+}
+
+✓ Added "playwright" to registry (~/.mcpkit/mcp-servers.json)
+```
+
+**Behavior:**
+- Accepts JSON paste (with or without outer braces)
+- Validates JSON syntax
+- Extracts server name (key) and config (value)
+- Stores in `~/.mcpkit/mcp-servers.json`
+- Handles duplicates: prompt to overwrite or cancel
+
+### `mcpkit registry remove`
+Remove MCP server(s) from the local registry.
+
+```bash
+$ mcpkit registry remove playwright
 
 ✓ Removed "playwright" from registry (~/.mcpkit/mcp-servers.json)
 ```
@@ -161,10 +202,6 @@ const [name, config] = Object.entries(parsed)[0];
 - `mcpkit update` - Sync registry from remote source/GitHub
 - `mcpkit search <query>` - Search available MCP servers
 - `mcpkit validate` - Validate `.mcp.json` syntax
-- `mcpkit registry` subcommands:
-  - `mcpkit registry add` - Add to personal registry
-  - `mcpkit registry remove` - Remove from registry
-  - `mcpkit registry import <url>` - Import from remote registry
 - Support for MCP server metadata (descriptions, tags, versions)
 - Interactive config editor for existing `.mcp.json`
 
