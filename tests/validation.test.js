@@ -4,6 +4,7 @@ import {
   validateServerConfig,
   parseJSON,
   parseServerInput,
+  normalizeServerConfig,
 } from '../dist/utils/validation.js';
 
 describe('validateServerName', () => {
@@ -67,11 +68,35 @@ describe('validateServerConfig', () => {
     expect(result.error).toContain('command');
   });
 
-  test('rejects config with non-string command', () => {
+  test('accepts config with command as string', () => {
+    const config = { command: 'npx' };
+    expect(validateServerConfig(config).valid).toBe(true);
+  });
+
+  test('accepts config with command as array of strings', () => {
+    const config = { command: ['npx', '-y', '@playwright/mcp@latest'] };
+    expect(validateServerConfig(config).valid).toBe(true);
+  });
+
+  test('rejects config with command as non-string/non-array', () => {
     const config = { command: 123 };
     const result = validateServerConfig(config);
     expect(result.valid).toBe(false);
-    expect(result.error).toContain('must be a string');
+    expect(result.error).toContain('must be a string or array');
+  });
+
+  test('rejects config with command array containing non-strings', () => {
+    const config = { command: ['npx', 123, 'test'] };
+    const result = validateServerConfig(config);
+    expect(result.valid).toBe(false);
+    expect(result.error).toContain('All items in "command" array must be strings');
+  });
+
+  test('rejects config with empty command array', () => {
+    const config = { command: [] };
+    const result = validateServerConfig(config);
+    expect(result.valid).toBe(false);
+    expect(result.error).toContain('cannot be empty');
   });
 
   test('rejects config with non-array args', () => {
@@ -176,5 +201,64 @@ describe('parseServerInput', () => {
   test('throws error for invalid config structure', () => {
     const input = '{"playwright": "not-an-object"}';
     expect(() => parseServerInput(input)).toThrow('must be an object');
+  });
+
+  test('parses and normalizes command array format', () => {
+    const input = '{"playwright": {"command": ["npx", "-y", "@playwright/mcp@latest"]}}';
+    const result = parseServerInput(input);
+    expect(result.name).toBe('playwright');
+    expect(result.config.command).toBe('npx');
+    expect(result.config.args).toEqual(['-y', '@playwright/mcp@latest']);
+  });
+
+  test('parses command array with existing args', () => {
+    const input = '{"test": {"command": ["node", "script.js"], "args": ["--verbose"]}}';
+    const result = parseServerInput(input);
+    expect(result.name).toBe('test');
+    expect(result.config.command).toBe('node');
+    expect(result.config.args).toEqual(['script.js', '--verbose']);
+  });
+});
+
+describe('normalizeServerConfig', () => {
+  test('converts command array to standard format', () => {
+    const config = { command: ['npx', '-y', '@playwright/mcp@latest'] };
+    const normalized = normalizeServerConfig(config);
+    expect(normalized.command).toBe('npx');
+    expect(normalized.args).toEqual(['-y', '@playwright/mcp@latest']);
+  });
+
+  test('preserves existing args when normalizing command array', () => {
+    const config = { command: ['node', 'script.js'], args: ['--verbose'] };
+    const normalized = normalizeServerConfig(config);
+    expect(normalized.command).toBe('node');
+    expect(normalized.args).toEqual(['script.js', '--verbose']);
+  });
+
+  test('returns string command unchanged', () => {
+    const config = { command: 'npx', args: ['@playwright/mcp@latest'] };
+    const normalized = normalizeServerConfig(config);
+    expect(normalized.command).toBe('npx');
+    expect(normalized.args).toEqual(['@playwright/mcp@latest']);
+  });
+
+  test('handles command array with single element', () => {
+    const config = { command: ['node'] };
+    const normalized = normalizeServerConfig(config);
+    expect(normalized.command).toBe('node');
+    expect(normalized.args).toEqual([]);
+  });
+
+  test('preserves other config fields during normalization', () => {
+    const config = {
+      command: ['npx', 'test'],
+      env: { NODE_ENV: 'production' },
+      type: 'stdio',
+    };
+    const normalized = normalizeServerConfig(config);
+    expect(normalized.command).toBe('npx');
+    expect(normalized.args).toEqual(['test']);
+    expect(normalized.env).toEqual({ NODE_ENV: 'production' });
+    expect(normalized.type).toBe('stdio');
   });
 });

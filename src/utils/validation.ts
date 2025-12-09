@@ -45,9 +45,21 @@ export function validateServerConfig(config: any): { valid: boolean; error?: str
     return { valid: false, error: 'Server configuration must include either a "command" field (stdio) or "url" field (streaming)' };
   }
 
-  // Validate 'command' field if present
-  if (hasCommand && typeof serverConfig.command !== 'string') {
-    return { valid: false, error: '"command" field must be a string' };
+  // Validate 'command' field if present - can be string or array
+  if (hasCommand) {
+    if (typeof serverConfig.command === 'string') {
+      // Valid: string format
+    } else if (Array.isArray(serverConfig.command)) {
+      // Valid: array format - check all items are strings
+      if (!serverConfig.command.every((item) => typeof item === 'string')) {
+        return { valid: false, error: 'All items in "command" array must be strings' };
+      }
+      if (serverConfig.command.length === 0) {
+        return { valid: false, error: '"command" array cannot be empty' };
+      }
+    } else {
+      return { valid: false, error: '"command" field must be a string or array of strings' };
+    }
   }
 
   // Validate 'url' field if present
@@ -88,6 +100,28 @@ export function validateServerConfig(config: any): { valid: boolean; error?: str
   }
 
   return { valid: true };
+}
+
+/**
+ * Normalize server configuration to convert array command format to standard format
+ * Converts: { command: ["npx", "-y", "pkg"] }
+ * To: { command: "npx", args: ["-y", "pkg"] }
+ */
+export function normalizeServerConfig(config: ServerConfig): ServerConfig {
+  // If command is not an array, return as-is
+  if (!Array.isArray(config.command)) {
+    return config;
+  }
+
+  // Convert array format to standard format
+  const [command, ...commandArgs] = config.command;
+  const normalizedConfig: ServerConfig = {
+    ...config,
+    command,
+    args: [...commandArgs, ...(config.args || [])],
+  };
+
+  return normalizedConfig;
 }
 
 /**
@@ -173,5 +207,8 @@ export function parseServerInput(input: string): { name: string; config: ServerC
     throw new Error(configValidation.error);
   }
 
-  return { name: name as string, config: config as ServerConfig };
+  // Normalize the config (convert array command format to standard format)
+  const normalizedConfig = normalizeServerConfig(config as ServerConfig);
+
+  return { name: name as string, config: normalizedConfig };
 }
