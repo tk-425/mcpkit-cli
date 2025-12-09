@@ -3,7 +3,7 @@ import { existsSync } from 'fs';
 import { getRegistryPath, getRegistryDir } from './paths.js';
 
 export interface ServerConfig {
-  command?: string;  // For stdio servers
+  command?: string | string[];  // For stdio servers - supports both string and array formats
   url?: string;      // For streaming servers
   args?: string[];
   type?: string;
