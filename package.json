@@ -13,7 +13,7 @@
     "build": "tsc",
     "dev": "tsc && node dist/index.js",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "pnpm build"
   },
   "repository": {
     "type": "git",
