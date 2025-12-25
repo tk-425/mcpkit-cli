@@ -1,17 +1,15 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm run build:*)",
+      "Bash(pnpm run build:*)",
       "Bash(node dist/index.js:*)",
       "Bash(chmod:*)",
-      "Bash(npm test:*)",
+      "Bash(pnpm test:*)",
       "Bash(find:*)"
     ],
     "deny": [],
     "ask": []
   },
   "enableAllProjectMcpServers": true,
-  "enabledMcpjsonServers": [
-    "context7"
-  ]
+  "enabledMcpjsonServers": ["context7"]
 }
