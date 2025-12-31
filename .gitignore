@@ -5,3 +5,12 @@ coverage/
 .DS_Store
 .env
 docs/
+.kilocode
+.claude
+.agent
+CLAUDE.md
+
+# Code-graph and vector memory
+.code-graph
+.vmem.*
+.vmem.yml
