@@ -5,11 +5,15 @@
       "Bash(node dist/index.js:*)",
       "Bash(chmod:*)",
       "Bash(pnpm test:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(code-graph-skills init:*)",
+      "Skill(vector-memory)"
     ],
     "deny": [],
     "ask": []
   },
   "enableAllProjectMcpServers": true,
-  "enabledMcpjsonServers": ["context7"]
+  "enabledMcpjsonServers": [
+    "context7"
+  ]
 }
