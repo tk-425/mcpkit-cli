@@ -1,43 +1,50 @@
-import { editor, confirm } from '@inquirer/prompts';
-import chalk from 'chalk';
-import { addServerToProject, serverExistsInProject } from '../utils/project-config.js';
-import { parseServerInput } from '../utils/validation.js';
+import { editor, confirm } from "@inquirer/prompts";
+import chalk from "chalk";
+import {
+  addServerToProject,
+  serverExistsInProject,
+} from "../utils/project-config.js";
+import { parseServerInput } from "../utils/validation.js";
 
 /**
  * Command handler for 'mcpkit add'
  */
 export async function addCommand(): Promise<void> {
   try {
-    console.log(chalk.blue('Opening editor for MCP server configuration...'));
+    console.log(chalk.blue("Opening editor for MCP server configuration..."));
     console.log();
-    console.log(chalk.gray('Instructions:'));
-    console.log(chalk.gray('  1. Paste your multi-line JSON configuration'));
-    console.log(chalk.gray('  2. Save and exit (vim: :wq | nano: Ctrl+O then Ctrl+X)'));
+    console.log(chalk.gray("Instructions:"));
+    console.log(chalk.gray("  1. Paste your multi-line JSON configuration"));
+    console.log(
+      chalk.gray("  2. Save and exit (vim: :wq | nano: Ctrl+O then Ctrl+X)"),
+    );
     console.log();
-    console.log(chalk.gray('Example formats:'));
-    console.log(chalk.gray('Stdio server:'));
+    console.log(chalk.gray("Example formats:"));
+    console.log(chalk.gray("Stdio server:"));
     console.log(chalk.gray('  "playwright": {'));
     console.log(chalk.gray('    "command": "npx",'));
     console.log(chalk.gray('    "args": ["@playwright/mcp@latest"]'));
-    console.log(chalk.gray('  }'));
-    console.log(chalk.gray('Streaming server:'));
+    console.log(chalk.gray("  }"));
+    console.log(chalk.gray("Streaming server:"));
     console.log(chalk.gray('  "context7": {'));
     console.log(chalk.gray('    "url": "https://api.context7.ai/mcp"'));
-    console.log(chalk.gray('  }'));
+    console.log(chalk.gray("  }"));
     console.log();
 
     const pastedInput = await editor({
-      message: 'Enter server configuration (paste JSON and save):',
-      default: '',
+      message: "Enter server configuration (paste JSON and save):",
+      default: "",
       validate: (value) => {
         if (!value.trim()) {
-          return 'Please provide a server configuration';
+          return "Please provide a server configuration";
         }
         try {
           parseServerInput(value);
           return true;
         } catch (error) {
-          return error instanceof Error ? error.message : 'Invalid configuration';
+          return error instanceof Error
+            ? error.message
+            : "Invalid configuration";
         }
       },
     });
@@ -53,7 +60,7 @@ export async function addCommand(): Promise<void> {
       });
 
       if (!shouldOverwrite) {
-        console.log(chalk.yellow('Cancelled.'));
+        console.log(chalk.yellow("Cancelled."));
         return;
       }
     }
@@ -63,11 +70,6 @@ export async function addCommand(): Promise<void> {
 
     console.log(chalk.green(`✓ Added "${name}" to .mcp.json`));
   } catch (error) {
-    if (error instanceof Error) {
-      console.error(chalk.red(`Error: ${error.message}`));
-    } else {
-      console.error(chalk.red('An unexpected error occurred'));
-    }
-    process.exit(1);
+    throw error;
   }
 }

@@ -28,29 +28,34 @@ npx mcpkit
 ### Local Installation (for development)
 
 1. Clone the repository:
+
 ```bash
 git clone https://github.com/tk-425/mcpkit-cli.git
 cd mcpkit
 ```
 
 2. Install dependencies:
+
 ```bash
-npm install
+bun install
 ```
 
-3. Build the project:
+3. Build the binary:
+
 ```bash
-npm run build
+bun run build:binary
 ```
 
-4. Link globally for local testing:
+4. Install globally:
+
 ```bash
-npm link
+sudo mv mcpkit /usr/local/bin/
 ```
 
 Now you can use `mcpkit` from anywhere on your system. The command will run from your local development directory.
 
 To unlink later:
+
 ```bash
 npm unlink -g mcpkit
 ```
@@ -66,6 +71,7 @@ mcpkit registry add
 This opens your editor where you can paste server configurations:
 
 **Stdio server example:**
+
 ```json
 "playwright": {
   "command": "npx",
@@ -74,6 +80,7 @@ This opens your editor where you can paste server configurations:
 ```
 
 **Streaming server example:**
+
 ```json
 "context7": {
   "url": "https://api.context7.ai/mcp"
@@ -109,6 +116,7 @@ mcpkit list
 These commands work with the `.mcp.json` file in your current directory.
 
 #### `mcpkit init`
+
 Create a new `.mcp.json` file by selecting servers from your registry.
 
 ```bash
@@ -116,11 +124,13 @@ mcpkit init
 ```
 
 **Interactive features:**
+
 - Multi-select checkbox interface
 - Merge or overwrite existing `.mcp.json`
 - Use arrow keys to navigate, space to select, enter to confirm
 
 #### `mcpkit add`
+
 Add a server directly to the current project's `.mcp.json`.
 
 ```bash
@@ -130,6 +140,7 @@ mcpkit add
 Opens an editor to paste server configuration. Creates `.mcp.json` if it doesn't exist.
 
 #### `mcpkit remove <server-name>`
+
 Remove a server from the current project's `.mcp.json`.
 
 ```bash
@@ -137,6 +148,7 @@ mcpkit remove playwright
 ```
 
 #### `mcpkit list`
+
 Display all servers configured in the current project.
 
 ```bash
@@ -151,6 +163,7 @@ mcpkit list --verbose
 These commands work with your global registry at `~/.mcpkit/mcp-servers.json`.
 
 #### `mcpkit registry add`
+
 Add a new server to your global registry.
 
 ```bash
@@ -160,6 +173,7 @@ mcpkit registry add
 Opens an editor where you can paste server configurations from MCP documentation.
 
 #### `mcpkit registry remove <server-name>`
+
 Remove a server from your global registry.
 
 ```bash
@@ -167,6 +181,7 @@ mcpkit registry remove playwright
 ```
 
 #### `mcpkit registry list`
+
 Display all servers in your global registry.
 
 ```bash
@@ -322,6 +337,7 @@ mcpkit registry add
 ### "Invalid JSON syntax"
 
 The tool validates JSON as you paste it. Common issues:
+
 - Missing quotes around keys
 - Trailing commas
 - Unmatched braces

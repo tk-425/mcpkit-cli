@@ -1,16 +1,42 @@
+# Dependencies
 node_modules/
+
+# Build outputs
 dist/
 coverage/
-*.log
+
+# System files
 .DS_Store
+*.log
+
+# Environment & secrets
 .env
+
+# Documentation
 docs/
+
+# AI Agent configurations
 .kilocode
 .claude
 .agent
 CLAUDE.md
+.mcp.json
 
-# Code-graph and vector memory
+# Code analysis & vector memory
 .code-graph
 .vmem.*
 .vmem.yml
+
+# AI Agents
+.rulez/
+.claude/
+.agent/
+.codex/
+.gemini/
+.qwen/
+GEMINI.md
+QWEN.md
+AGENTS.md
+
+# build
+mcpkit
