@@ -8,6 +8,7 @@ import { registryListCommand } from "./commands/registry-list.js";
 import { listCommand } from "./commands/list.js";
 import { initCommand } from "./commands/init.js";
 import { editCommand } from "./commands/edit.js";
+import { addCommand } from "./commands/add.js";
 import { removeCommand } from "./commands/remove.js";
 
 const program = new Command();
@@ -28,6 +29,12 @@ program
   .command("edit")
   .description("Edit or add an MCP server to the project .mcp.json")
   .action(editCommand);
+
+// Add command
+program
+  .command("add")
+  .description("Add servers from registry to .mcp.json")
+  .action(addCommand);
 
 // Remove command
 program

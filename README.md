@@ -109,6 +109,17 @@ mcpkit init
 - Merge or overwrite existing `.mcp.json`
 - Use arrow keys to navigate, space to select, enter to confirm
 
+#### `mcpkit add`
+
+Interactively add servers from the registry to your project's `.mcp.json`.
+
+```bash
+mcpkit add
+```
+
+Lists all servers available in the registry that are not yet in your project.
+Requires `.mcp.json` to exist (use `mcpkit init` first).
+
 #### `mcpkit edit`
 
 Add or edit a server directly to the current project's `.mcp.json`.
@@ -276,7 +287,7 @@ mcpkit list
 
 ```bash
 # Option 1: Add from registry
-mcpkit init
+mcpkit add
 # (select additional servers to merge)
 
 # Option 2: Add/Edit directly
@@ -294,7 +305,7 @@ mcpkit registry list
 mcpkit registry add
 
 # Remove unused servers
-mcpkit registry remove old-server
+mcpkit registry remove
 
 # View details
 mcpkit registry list --verbose
