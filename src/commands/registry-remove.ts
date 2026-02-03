@@ -1,36 +1,62 @@
-import chalk from 'chalk';
-import { removeServerFromRegistry, serverExistsInRegistry } from '../utils/registry.js';
+// Import checkbox from inquirer
+import { checkbox, confirm } from "@inquirer/prompts";
+import chalk from "chalk";
+import { removeServerFromRegistry, readRegistry } from "../utils/registry.js";
 
 /**
- * Command handler for 'mcpkit registry remove <server-name>'
+ * Command handler for 'mcpkit registry remove'
  */
-export async function registryRemoveCommand(serverName: string): Promise<void> {
+export async function registryRemoveCommand(): Promise<void> {
   try {
-    // Validate server name provided
-    if (!serverName || !serverName.trim()) {
-      console.error(chalk.red('Error: Please provide a server name'));
-      console.log(chalk.gray('Usage: mcpkit registry remove <server-name>'));
-      process.exit(1);
+    const registry = await readRegistry();
+    const serverNames = Object.keys(registry.servers);
+
+    if (serverNames.length === 0) {
+      console.log(chalk.yellow("No MCP servers found in registry"));
+      return;
     }
 
-    // Check if server exists in registry
-    const exists = await serverExistsInRegistry(serverName);
-    if (!exists) {
-      console.error(chalk.red(`Error: Server "${serverName}" not found in registry`));
-      console.log(chalk.gray('Use "mcpkit list" to see available servers'));
-      process.exit(1);
+    console.log(chalk.blue("\nSelect MCP Servers to remove from registry:"));
+    console.log(
+      chalk.gray(
+        "(Use ↑/↓ to navigate, space to select/deselect, enter to confirm)\n",
+      ),
+    );
+
+    const serversToRemove = await checkbox({
+      message: "Choose servers to remove:",
+      choices: serverNames.map((name) => ({
+        name,
+        value: name,
+        checked: false,
+      })),
+      required: false,
+    });
+
+    if (serversToRemove.length === 0) {
+      console.log(chalk.yellow("No servers selected for removal."));
+      return;
     }
 
-    // Remove from registry
-    await removeServerFromRegistry(serverName);
+    const confirmed = await confirm({
+      message: `Are you sure you want to remove ${serversToRemove.length} server(s)?`,
+      default: false,
+    });
 
-    console.log(chalk.green(`✓ Removed "${serverName}" from registry (~/.mcpkit/mcp-servers.json)`));
+    if (!confirmed) {
+      console.log(chalk.yellow("Cancelled."));
+      return;
+    }
+
+    for (const serverName of serversToRemove) {
+      await removeServerFromRegistry(serverName);
+      console.log(
+        chalk.green(
+          `✓ Removed "${serverName}" from registry (~/.mcpkit/mcp-servers.json)`,
+        ),
+      );
+    }
   } catch (error) {
-    if (error instanceof Error) {
-      console.error(chalk.red(`Error: ${error.message}`));
-    } else {
-      console.error(chalk.red('An unexpected error occurred'));
-    }
-    process.exit(1);
+    throw error;
   }
 }

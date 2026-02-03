@@ -1,40 +1,73 @@
-import chalk from 'chalk';
-import { removeServerFromProject, projectConfigExists } from '../utils/project-config.js';
+// Import checkbox from inquirer
+import { checkbox, confirm } from "@inquirer/prompts";
+import chalk from "chalk";
+import {
+  removeServerFromProject,
+  projectConfigExists,
+  readProjectConfig,
+} from "../utils/project-config.js";
 
 /**
- * Command handler for 'mcpkit remove <server-name>'
+ * Command handler for 'mcpkit remove'
  */
-export async function removeCommand(serverName: string): Promise<void> {
+export async function removeCommand(): Promise<void> {
   try {
-    // Validate server name provided
-    if (!serverName || !serverName.trim()) {
-      console.error(chalk.red('Error: Please provide a server name'));
-      console.log(chalk.gray('Usage: mcpkit remove <server-name>'));
-      process.exit(1);
-    }
-
     // Check if .mcp.json exists
     if (!projectConfigExists()) {
-      console.error(chalk.red('Error: .mcp.json not found in current directory'));
-      console.log(chalk.gray('Use "mcpkit init" to create a project configuration first'));
+      console.error(
+        chalk.red("Error: .mcp.json not found in current directory"),
+      );
+      console.log(
+        chalk.gray('Use "mcpkit init" to create a project configuration first'),
+      );
       process.exit(1);
     }
 
-    // Try to remove server from project
-    const removed = await removeServerFromProject(serverName);
+    const config = await readProjectConfig();
+    const serverNames = Object.keys(config.mcpServers);
 
-    if (!removed) {
-      console.error(chalk.red(`Error: Server "${serverName}" not found in .mcp.json`));
-      process.exit(1);
+    if (serverNames.length === 0) {
+      console.log(chalk.yellow("No MCP servers found in .mcp.json"));
+      return;
     }
 
-    console.log(chalk.green(`✓ Removed "${serverName}" from .mcp.json`));
+    console.log(chalk.blue("\nSelect MCP Servers to remove from .mcp.json:"));
+    console.log(
+      chalk.gray(
+        "(Use ↑/↓ to navigate, space to select/deselect, enter to confirm)\n",
+      ),
+    );
+
+    const serversToRemove = await checkbox({
+      message: "Choose servers to remove:",
+      choices: serverNames.map((name) => ({
+        name,
+        value: name,
+        checked: false,
+      })),
+      required: false,
+    });
+
+    if (serversToRemove.length === 0) {
+      console.log(chalk.yellow("No servers selected for removal."));
+      return;
+    }
+
+    const confirmed = await confirm({
+      message: `Are you sure you want to remove ${serversToRemove.length} server(s)?`,
+      default: false,
+    });
+
+    if (!confirmed) {
+      console.log(chalk.yellow("Cancelled."));
+      return;
+    }
+
+    for (const serverName of serversToRemove) {
+      await removeServerFromProject(serverName);
+      console.log(chalk.green(`✓ Removed "${serverName}" from .mcp.json`));
+    }
   } catch (error) {
-    if (error instanceof Error) {
-      console.error(chalk.red(`Error: ${error.message}`));
-    } else {
-      console.error(chalk.red('An unexpected error occurred'));
-    }
-    process.exit(1);
+    throw error;
   }
 }
