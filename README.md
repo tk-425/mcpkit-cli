@@ -40,12 +40,6 @@ sudo mv mcpkit /usr/local/bin/
 
 Now you can use `mcpkit` from anywhere on your system. The command will run from your local development directory.
 
-To unlink later:
-
-```bash
-npm unlink -g mcpkit
-```
-
 ## Quick Start
 
 ### 1. Add servers to your global registry
