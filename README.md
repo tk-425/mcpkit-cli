@@ -109,23 +109,27 @@ mcpkit init
 - Merge or overwrite existing `.mcp.json`
 - Use arrow keys to navigate, space to select, enter to confirm
 
-#### `mcpkit add`
+#### `mcpkit edit`
 
-Add a server directly to the current project's `.mcp.json`.
-
-```bash
-mcpkit add
-```
-
-Opens an editor to paste server configuration. Creates `.mcp.json` if it doesn't exist.
-
-#### `mcpkit remove <server-name>`
-
-Remove a server from the current project's `.mcp.json`.
+Add or edit a server directly to the current project's `.mcp.json`.
 
 ```bash
-mcpkit remove playwright
+mcpkit edit
 ```
+
+Opens an editor to paste or edit server configuration. Creates `.mcp.json` if it doesn't exist.
+
+#### `mcpkit remove`
+
+Remove servers from the current project's `.mcp.json`.
+
+```bash
+mcpkit remove
+```
+
+**Interactive features:**
+
+- Multi-select checkbox interface to choose servers to remove.
 
 #### `mcpkit list`
 
@@ -152,13 +156,17 @@ mcpkit registry add
 
 Opens an editor where you can paste server configurations from MCP documentation.
 
-#### `mcpkit registry remove <server-name>`
+#### `mcpkit registry remove`
 
-Remove a server from your global registry.
+Remove servers from your global registry.
 
 ```bash
-mcpkit registry remove playwright
+mcpkit registry remove
 ```
+
+**Interactive features:**
+
+- Multi-select checkbox interface to choose servers to remove.
 
 #### `mcpkit registry list`
 
@@ -271,9 +279,9 @@ mcpkit list
 mcpkit init
 # (select additional servers to merge)
 
-# Option 2: Add directly
-mcpkit add
-# (paste server config)
+# Option 2: Add/Edit directly
+mcpkit edit
+# (paste or edit server config)
 ```
 
 ### Managing your registry

@@ -7,7 +7,7 @@ import { registryRemoveCommand } from "./commands/registry-remove.js";
 import { registryListCommand } from "./commands/registry-list.js";
 import { listCommand } from "./commands/list.js";
 import { initCommand } from "./commands/init.js";
-import { addCommand } from "./commands/add.js";
+import { editCommand } from "./commands/edit.js";
 import { removeCommand } from "./commands/remove.js";
 
 const program = new Command();
@@ -23,16 +23,16 @@ program
   .description("Create .mcp.json file with selected servers from registry")
   .action(initCommand);
 
-// Add command
+// Edit command
 program
-  .command("add")
-  .description("Add a new MCP server to the project .mcp.json")
-  .action(addCommand);
+  .command("edit")
+  .description("Edit or add an MCP server to the project .mcp.json")
+  .action(editCommand);
 
 // Remove command
 program
-  .command("remove <server-name>")
-  .description("Remove an MCP server from the project .mcp.json")
+  .command("remove")
+  .description("Remove MCP servers from the project .mcp.json")
   .action(removeCommand);
 
 // List command
@@ -53,8 +53,8 @@ registry
   .action(registryAddCommand);
 
 registry
-  .command("remove <server-name>")
-  .description("Remove an MCP server from the registry")
+  .command("remove")
+  .description("Remove MCP servers from the registry")
   .action(registryRemoveCommand);
 
 registry

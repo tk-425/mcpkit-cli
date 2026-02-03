@@ -7,14 +7,16 @@ import {
 import { parseServerInput } from "../utils/validation.js";
 
 /**
- * Command handler for 'mcpkit add'
+ * Command handler for 'mcpkit edit'
  */
-export async function addCommand(): Promise<void> {
+export async function editCommand(): Promise<void> {
   try {
     console.log(chalk.blue("Opening editor for MCP server configuration..."));
     console.log();
     console.log(chalk.gray("Instructions:"));
-    console.log(chalk.gray("  1. Paste your multi-line JSON configuration"));
+    console.log(
+      chalk.gray("  1. Paste or edit your multi-line JSON configuration"),
+    );
     console.log(
       chalk.gray("  2. Save and exit (vim: :wq | nano: Ctrl+O then Ctrl+X)"),
     );
@@ -68,7 +70,7 @@ export async function addCommand(): Promise<void> {
     // Add to project config
     await addServerToProject(name, config);
 
-    console.log(chalk.green(`✓ Added "${name}" to .mcp.json`));
+    console.log(chalk.green(`✓ Updated "${name}" in .mcp.json`));
   } catch (error) {
     throw error;
   }
