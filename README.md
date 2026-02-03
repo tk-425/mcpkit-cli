@@ -13,20 +13,6 @@
 
 ## Installation
 
-### From npm (when published)
-
-```bash
-npm install -g mcpkit
-```
-
-Or use directly with npx:
-
-```bash
-npx mcpkit
-```
-
-### Local Installation (for development)
-
 1. Clone the repository:
 
 ```bash
