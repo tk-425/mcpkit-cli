@@ -13,7 +13,6 @@
     "build": "tsc",
     "build:binary": "bun build --compile ./src/index.ts --outfile mcpkit",
     "dev": "tsc && node dist/index.js",
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "prepublishOnly": "pnpm build"
   },
   "repository": {
@@ -41,7 +40,6 @@
   },
   "devDependencies": {
     "@types/node": "^24.10.1",
-    "jest": "^30.2.0",
     "typescript": "^5.9.3"
   }
 }
