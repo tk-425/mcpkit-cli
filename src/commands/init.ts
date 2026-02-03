@@ -1,12 +1,12 @@
-import { checkbox, confirm } from '@inquirer/prompts';
-import chalk from 'chalk';
-import { readRegistry } from '../utils/registry.js';
+import { checkbox, confirm } from "@inquirer/prompts";
+import chalk from "chalk";
+import { readRegistry } from "../utils/registry.js";
 import {
   writeProjectConfig,
   readProjectConfig,
-  projectConfigExists
-} from '../utils/project-config.js';
-import type { ProjectConfig } from '../utils/project-config.js';
+  projectConfigExists,
+} from "../utils/project-config.js";
+import type { ProjectConfig } from "../utils/project-config.js";
 
 /**
  * Command handler for 'mcpkit init'
@@ -18,8 +18,12 @@ export async function initCommand(): Promise<void> {
     const serverNames = Object.keys(registry.servers);
 
     if (serverNames.length === 0) {
-      console.log(chalk.yellow('No MCP servers in registry.'));
-      console.log(chalk.gray('Use "mcpkit registry add" to add servers to your registry first.'));
+      console.log(chalk.yellow("No MCP servers in registry."));
+      console.log(
+        chalk.gray(
+          'Use "mcpkit registry add" to add servers to your registry first.',
+        ),
+      );
       return;
     }
 
@@ -30,7 +34,8 @@ export async function initCommand(): Promise<void> {
 
     if (configExists) {
       const action = await confirm({
-        message: '.mcp.json already exists. Do you want to merge with existing servers?',
+        message:
+          ".mcp.json already exists. Do you want to merge with existing servers?",
         default: true,
       });
 
@@ -38,12 +43,12 @@ export async function initCommand(): Promise<void> {
         shouldMerge = true;
       } else {
         const shouldOverwrite = await confirm({
-          message: 'Overwrite existing .mcp.json?',
+          message: "Overwrite existing .mcp.json?",
           default: false,
         });
 
         if (!shouldOverwrite) {
-          console.log(chalk.yellow('Cancelled.'));
+          console.log(chalk.yellow("Cancelled."));
           return;
         }
         shouldMerge = false;
@@ -51,11 +56,15 @@ export async function initCommand(): Promise<void> {
     }
 
     // Present multi-select checkbox interface
-    console.log(chalk.blue('\nSelect MCP Servers for .mcp.json file:'));
-    console.log(chalk.gray('(Use ↑/↓ to navigate, space to select/deselect, enter to confirm)\n'));
+    console.log(chalk.blue("\nSelect MCP Servers for .mcp.json file:"));
+    console.log(
+      chalk.gray(
+        "(Use ↑/↓ to navigate, space to select/deselect, enter to confirm)\n",
+      ),
+    );
 
     const selectedServers = await checkbox({
-      message: 'Choose servers:',
+      message: "Choose servers:",
       choices: serverNames.map((name) => ({
         name,
         value: name,
@@ -65,7 +74,7 @@ export async function initCommand(): Promise<void> {
     });
 
     if (selectedServers.length === 0) {
-      console.log(chalk.yellow('No servers selected. Cancelled.'));
+      console.log(chalk.yellow("No servers selected. Cancelled."));
       return;
     }
 
@@ -88,17 +97,16 @@ export async function initCommand(): Promise<void> {
     // Write to .mcp.json
     await writeProjectConfig(projectConfig);
 
-    console.log(chalk.green(`\n✓ Created .mcp.json with ${selectedServers.length} server${selectedServers.length === 1 ? '' : 's'}`));
-    console.log(chalk.gray('Selected servers:'));
+    console.log(
+      chalk.green(
+        `\n✓ Created .mcp.json with ${selectedServers.length} server${selectedServers.length === 1 ? "" : "s"}`,
+      ),
+    );
+    console.log(chalk.gray("Selected servers:"));
     selectedServers.forEach((name) => {
       console.log(chalk.gray(`  • ${name}`));
     });
   } catch (error) {
-    if (error instanceof Error) {
-      console.error(chalk.red(`Error: ${error.message}`));
-    } else {
-      console.error(chalk.red('An unexpected error occurred'));
-    }
-    process.exit(1);
+    throw error;
   }
 }
