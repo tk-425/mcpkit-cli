@@ -287,7 +287,7 @@ mcpkit list
 
 ```bash
 # Option 1: Add from registry
-mcpkit init
+mcpkit add
 # (select additional servers to merge)
 
 # Option 2: Add/Edit directly
@@ -305,7 +305,7 @@ mcpkit registry list
 mcpkit registry add
 
 # Remove unused servers
-mcpkit registry remove old-server
+mcpkit registry remove
 
 # View details
 mcpkit registry list --verbose
