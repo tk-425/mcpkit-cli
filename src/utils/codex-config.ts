@@ -1,5 +1,6 @@
 import { readFile, writeFile, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
+import { resolve } from 'path';
 import {
   getCodexProjectConfigPath,
   getCodexProjectDirPath,
@@ -30,26 +31,58 @@ export interface CodexConfigFile extends TomlSerializable {
   mcp_servers?: Record<string, CodexMcpServerConfig>;
 }
 
-async function readTomlFile<T>(
-  filePath: string,
-  missingMessage: string,
-): Promise<T> {
-  if (!existsSync(filePath)) {
-    throw new Error(missingMessage);
+function getTrustedCodexPaths(): { projectConfigPath: string; registryPath: string } {
+  return {
+    projectConfigPath: resolve(getCodexProjectConfigPath()),
+    registryPath: resolve(getCodexRegistryPath()),
+  };
+}
+
+function assertTrustedCodexPath(filePath: string): string {
+  const resolvedPath = resolve(filePath);
+  const { projectConfigPath, registryPath } = getTrustedCodexPaths();
+
+  if (resolvedPath !== projectConfigPath && resolvedPath !== registryPath) {
+    throw new Error(`Refusing to access unexpected Codex config path: ${filePath}`);
   }
 
-  const content = await readFile(filePath, 'utf-8');
-  return parseToml<T>(content);
+  return resolvedPath;
+}
+
+async function readCodexRegistryFile(): Promise<CodexConfigFile> {
+  const { registryPath } = getTrustedCodexPaths();
+  const trustedPath = assertTrustedCodexPath(registryPath);
+
+  if (!existsSync(trustedPath)) {
+    throw new Error('Codex registry not found in ~/.mcpkit/codex-mcp-servers.toml');
+  }
+
+  const content = await readFile(trustedPath, 'utf-8');
+  return parseToml<CodexConfigFile>(content);
+}
+
+async function readCodexProjectFile(): Promise<CodexConfigFile> {
+  const { projectConfigPath } = getTrustedCodexPaths();
+  const trustedPath = assertTrustedCodexPath(projectConfigPath);
+
+  if (!existsSync(trustedPath)) {
+    throw new Error('.codex/config.toml not found in current directory');
+  }
+
+  const content = await readFile(trustedPath, 'utf-8');
+  return parseToml<CodexConfigFile>(content);
 }
 
 async function writeTomlFile(filePath: string, value: TomlSerializable): Promise<void> {
-  await writeFile(filePath, stringifyToml(value), 'utf-8');
+  const trustedPath = assertTrustedCodexPath(filePath);
+
+  await writeFile(trustedPath, stringifyToml(value), 'utf-8');
 }
 
 export async function initCodexRegistry(): Promise<void> {
-  const registryPath = getCodexRegistryPath();
+  const { registryPath } = getTrustedCodexPaths();
 
-  if (!existsSync(getCodexRegistryPath())) {
+  if (!existsSync(registryPath)) {
     await writeTomlFile(registryPath, { mcp_servers: {} });
   }
 }
@@ -59,20 +92,14 @@ export async function readCodexRegistry(): Promise<CodexConfigFile> {
     await initCodexRegistry();
   }
 
-  const config = await readTomlFile<CodexConfigFile>(
-    getCodexRegistryPath(),
-    'Codex registry not found in ~/.mcpkit/codex-mcp-servers.toml',
-  );
+  const config = await readCodexRegistryFile();
 
   ensureCodexMcpServers(config);
   return config;
 }
 
 export async function readCodexProjectConfig(): Promise<CodexConfigFile> {
-  const config = await readTomlFile<CodexConfigFile>(
-    getCodexProjectConfigPath(),
-    '.codex/config.toml not found in current directory',
-  );
+  const config = await readCodexProjectFile();
 
   ensureCodexMcpServers(config);
   return config;
