@@ -1,4 +1,6 @@
 import type { ServerConfig } from './registry.js';
+import type { CodexMcpServerConfig } from './codex-config.js';
+import { parseToml } from './toml.js';
 
 /**
  * Validate server name format
@@ -96,6 +98,147 @@ export function validateServerConfig(config: any): { valid: boolean; error?: str
   if (serverConfig.type !== undefined) {
     if (typeof serverConfig.type !== 'string') {
       return { valid: false, error: '"type" field must be a string' };
+    }
+  }
+
+  return { valid: true };
+}
+
+function validateStringArray(value: unknown, fieldName: string): { valid: boolean; error?: string } {
+  if (!Array.isArray(value)) {
+    return { valid: false, error: `"${fieldName}" field must be an array` };
+  }
+
+  if (!value.every((item) => typeof item === 'string')) {
+    return { valid: false, error: `All items in "${fieldName}" must be strings` };
+  }
+
+  return { valid: true };
+}
+
+function validateStringRecord(
+  value: unknown,
+  fieldName: string,
+): { valid: boolean; error?: string } {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return { valid: false, error: `"${fieldName}" field must be an object` };
+  }
+
+  if (!Object.values(value).every((item) => typeof item === 'string')) {
+    return {
+      valid: false,
+      error: `All values in "${fieldName}" must be strings`,
+    };
+  }
+
+  return { valid: true };
+}
+
+export function validateCodexServerConfig(config: any): { valid: boolean; error?: string } {
+  if (typeof config !== 'object' || config === null || Array.isArray(config)) {
+    return { valid: false, error: 'Server configuration must be an object' };
+  }
+
+  const serverConfig = config as CodexMcpServerConfig;
+  const hasCommand = serverConfig.command !== undefined;
+  const hasUrl = serverConfig.url !== undefined;
+
+  if (hasCommand === hasUrl) {
+    return {
+      valid: false,
+      error: 'Codex server configuration must include exactly one of "command" or "url"',
+    };
+  }
+
+  if (hasCommand && typeof serverConfig.command !== 'string') {
+    return { valid: false, error: '"command" field must be a string' };
+  }
+
+  if (hasUrl && typeof serverConfig.url !== 'string') {
+    return { valid: false, error: '"url" field must be a string' };
+  }
+
+  if (serverConfig.args !== undefined) {
+    const result = validateStringArray(serverConfig.args, 'args');
+    if (!result.valid) {
+      return result;
+    }
+  }
+
+  if (serverConfig.env !== undefined) {
+    const result = validateStringRecord(serverConfig.env, 'env');
+    if (!result.valid) {
+      return result;
+    }
+  }
+
+  if (serverConfig.env_vars !== undefined) {
+    const result = validateStringArray(serverConfig.env_vars, 'env_vars');
+    if (!result.valid) {
+      return result;
+    }
+  }
+
+  if (serverConfig.cwd !== undefined && typeof serverConfig.cwd !== 'string') {
+    return { valid: false, error: '"cwd" field must be a string' };
+  }
+
+  if (
+    serverConfig.bearer_token_env_var !== undefined &&
+    typeof serverConfig.bearer_token_env_var !== 'string'
+  ) {
+    return { valid: false, error: '"bearer_token_env_var" field must be a string' };
+  }
+
+  if (serverConfig.http_headers !== undefined) {
+    const result = validateStringRecord(serverConfig.http_headers, 'http_headers');
+    if (!result.valid) {
+      return result;
+    }
+  }
+
+  if (serverConfig.env_http_headers !== undefined) {
+    const result = validateStringRecord(serverConfig.env_http_headers, 'env_http_headers');
+    if (!result.valid) {
+      return result;
+    }
+  }
+
+  if (
+    serverConfig.startup_timeout_sec !== undefined &&
+    (typeof serverConfig.startup_timeout_sec !== 'number' ||
+      !Number.isFinite(serverConfig.startup_timeout_sec))
+  ) {
+    return { valid: false, error: '"startup_timeout_sec" field must be a number' };
+  }
+
+  if (
+    serverConfig.tool_timeout_sec !== undefined &&
+    (typeof serverConfig.tool_timeout_sec !== 'number' ||
+      !Number.isFinite(serverConfig.tool_timeout_sec))
+  ) {
+    return { valid: false, error: '"tool_timeout_sec" field must be a number' };
+  }
+
+  if (serverConfig.enabled !== undefined && typeof serverConfig.enabled !== 'boolean') {
+    return { valid: false, error: '"enabled" field must be a boolean' };
+  }
+
+  if (serverConfig.required !== undefined && typeof serverConfig.required !== 'boolean') {
+    return { valid: false, error: '"required" field must be a boolean' };
+  }
+
+  if (serverConfig.enabled_tools !== undefined) {
+    const result = validateStringArray(serverConfig.enabled_tools, 'enabled_tools');
+    if (!result.valid) {
+      return result;
+    }
+  }
+
+  if (serverConfig.disabled_tools !== undefined) {
+    const result = validateStringArray(serverConfig.disabled_tools, 'disabled_tools');
+    if (!result.valid) {
+      return result;
     }
   }
 
@@ -211,4 +354,46 @@ export function parseServerInput(input: string): { name: string; config: ServerC
   const normalizedConfig = normalizeServerConfig(config as ServerConfig);
 
   return { name: name as string, config: normalizedConfig };
+}
+
+export function parseCodexServerInput(
+  input: string,
+): { name: string; config: CodexMcpServerConfig } {
+  const cleaned = input.trim();
+
+  if (!cleaned) {
+    throw new Error('Input cannot be empty');
+  }
+
+  const parsed = parseToml<{ mcp_servers?: Record<string, CodexMcpServerConfig> }>(cleaned);
+  const servers = parsed.mcp_servers;
+
+  if (!servers || typeof servers !== 'object') {
+    throw new Error('TOML input must contain an [mcp_servers.<name>] table');
+  }
+
+  const entries = Object.entries(servers);
+
+  if (entries.length === 0) {
+    throw new Error('No Codex server configuration found in input');
+  }
+
+  if (entries.length > 1) {
+    throw new Error('Please provide only one Codex server configuration at a time');
+  }
+
+  const [name, config] = entries[0];
+  const nameValidation = validateServerName(name);
+
+  if (!nameValidation.valid) {
+    throw new Error(nameValidation.error);
+  }
+
+  const configValidation = validateCodexServerConfig(config);
+
+  if (!configValidation.valid) {
+    throw new Error(configValidation.error);
+  }
+
+  return { name, config };
 }

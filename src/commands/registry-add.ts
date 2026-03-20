@@ -4,42 +4,76 @@ import {
   addServerToRegistry,
   serverExistsInRegistry,
 } from "../utils/registry.js";
-import { parseServerInput } from "../utils/validation.js";
+import {
+  addServerToCodexRegistry,
+  serverExistsInCodexRegistry,
+} from "../utils/codex-config.js";
+import { parseCodexServerInput, parseServerInput } from "../utils/validation.js";
+import type { TargetOptions } from "../utils/targets.js";
+import { resolveSingleRegistryTarget } from "./registry-targets.js";
 
 /**
  * Command handler for 'mcpkit registry add'
  */
-export async function registryAddCommand(): Promise<void> {
+export async function registryAddCommand(options: TargetOptions): Promise<void> {
   try {
+    const target = await resolveSingleRegistryTarget(options);
+
+    if (!target) {
+      console.log(chalk.yellow("No registry target selected. Cancelled."));
+      return;
+    }
+
     console.log(chalk.blue("Opening editor for MCP server configuration..."));
     console.log();
     console.log(chalk.gray("Instructions:"));
-    console.log(chalk.gray("  1. Paste your multi-line JSON configuration"));
+    console.log(
+      chalk.gray(
+        target === "claude"
+          ? "  1. Paste your multi-line JSON configuration"
+          : "  1. Paste your single Codex TOML [mcp_servers.<name>] configuration",
+      ),
+    );
     console.log(
       chalk.gray("  2. Save and exit (vim: :wq | nano: Ctrl+O then Ctrl+X)"),
     );
     console.log();
     console.log(chalk.gray("Example formats:"));
-    console.log(chalk.gray("Stdio server:"));
-    console.log(chalk.gray('  "playwright": {'));
-    console.log(chalk.gray('    "command": "npx",'));
-    console.log(chalk.gray('    "args": ["@playwright/mcp@latest"]'));
-    console.log(chalk.gray("  }"));
-    console.log(chalk.gray("Streaming server:"));
-    console.log(chalk.gray('  "context7": {'));
-    console.log(chalk.gray('    "url": "https://api.context7.ai/mcp"'));
-    console.log(chalk.gray("  }"));
+
+    if (target === "claude") {
+      console.log(chalk.gray("Stdio server:"));
+      console.log(chalk.gray('  "playwright": {'));
+      console.log(chalk.gray('    "command": "npx",'));
+      console.log(chalk.gray('    "args": ["@playwright/mcp@latest"]'));
+      console.log(chalk.gray("  }"));
+      console.log(chalk.gray("Streaming server:"));
+      console.log(chalk.gray('  "context7": {'));
+      console.log(chalk.gray('    "url": "https://api.context7.ai/mcp"'));
+      console.log(chalk.gray("  }"));
+    } else {
+      console.log(chalk.gray("[mcp_servers.context7]"));
+      console.log(chalk.gray('command = "npx"'));
+      console.log(chalk.gray('args = ["-y", "@upstash/context7-mcp@latest"]'));
+    }
+
     console.log();
 
     const pastedInput = await editor({
-      message: "Enter server configuration (paste JSON and save):",
+      message:
+        target === "claude"
+          ? "Enter server configuration (paste JSON and save):"
+          : "Enter Codex server configuration (paste TOML and save):",
       default: "",
       validate: (value) => {
         if (!value.trim()) {
           return "Please provide a server configuration";
         }
         try {
-          parseServerInput(value);
+          if (target === "claude") {
+            parseServerInput(value);
+          } else {
+            parseCodexServerInput(value);
+          }
           return true;
         } catch (error) {
           return error instanceof Error
@@ -49,13 +83,35 @@ export async function registryAddCommand(): Promise<void> {
       },
     });
 
-    const { name, config } = parseServerInput(pastedInput);
+    if (target === "claude") {
+      const { name, config } = parseServerInput(pastedInput);
+      const exists = await serverExistsInRegistry(name);
 
-    // Check if server already exists
-    const exists = await serverExistsInRegistry(name);
+      if (exists) {
+        const shouldOverwrite = await confirm({
+          message: `Server "${name}" already exists in Claude registry. Overwrite?`,
+          default: false,
+        });
+
+        if (!shouldOverwrite) {
+          console.log(chalk.yellow("Cancelled."));
+          return;
+        }
+      }
+
+      await addServerToRegistry(name, config);
+      console.log(
+        chalk.green(`✓ Added "${name}" to Claude registry (~/.mcpkit/mcp-servers.json)`),
+      );
+      return;
+    }
+
+    const { name, config } = parseCodexServerInput(pastedInput);
+    const exists = await serverExistsInCodexRegistry(name);
+
     if (exists) {
       const shouldOverwrite = await confirm({
-        message: `Server "${name}" already exists in registry. Overwrite?`,
+        message: `Server "${name}" already exists in Codex registry. Overwrite?`,
         default: false,
       });
 
@@ -65,11 +121,11 @@ export async function registryAddCommand(): Promise<void> {
       }
     }
 
-    // Add to registry
-    await addServerToRegistry(name, config);
-
+    await addServerToCodexRegistry(name, config);
     console.log(
-      chalk.green(`✓ Added "${name}" to registry (~/.mcpkit/mcp-servers.json)`),
+      chalk.green(
+        `✓ Added "${name}" to Codex registry (~/.mcpkit/codex-mcp-servers.toml)`,
+      ),
     );
   } catch (error) {
     throw error;
