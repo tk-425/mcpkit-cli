@@ -1,22 +1,49 @@
-// Import checkbox from inquirer
 import { checkbox, confirm } from "@inquirer/prompts";
 import chalk from "chalk";
 import { removeServerFromRegistry, readRegistry } from "../utils/registry.js";
+import {
+  removeServerFromCodexRegistry,
+  readCodexRegistry,
+  ensureCodexMcpServers,
+} from "../utils/codex-config.js";
+import type { TargetOptions } from "../utils/targets.js";
+import { resolveSingleRegistryTarget } from "./registry-targets.js";
 
 /**
  * Command handler for 'mcpkit registry remove'
  */
-export async function registryRemoveCommand(): Promise<void> {
+export async function registryRemoveCommand(options: TargetOptions): Promise<void> {
   try {
-    const registry = await readRegistry();
-    const serverNames = Object.keys(registry.servers);
+    const target = await resolveSingleRegistryTarget(options);
 
-    if (serverNames.length === 0) {
-      console.log(chalk.yellow("No MCP servers found in registry"));
+    if (!target) {
+      console.log(chalk.yellow("No registry target selected. Cancelled."));
       return;
     }
 
-    console.log(chalk.blue("\nSelect MCP Servers to remove from registry:"));
+    const serverNames =
+      target === "claude"
+        ? Object.keys((await readRegistry()).servers)
+        : Object.keys(ensureCodexMcpServers(await readCodexRegistry()));
+
+    if (serverNames.length === 0) {
+      console.log(
+        chalk.yellow(
+          target === "claude"
+            ? "No MCP servers found in Claude registry"
+            : "No MCP servers found in Codex registry",
+        ),
+      );
+      return;
+    }
+
+    console.log(
+      chalk.blue(
+        target === "claude"
+          ? "\nSelect Claude Code MCP servers to remove from registry:"
+          : "\nSelect Codex CLI MCP servers to remove from registry:",
+      ),
+    );
     console.log(
       chalk.gray(
         "(Use ↑/↓ to navigate, space to select/deselect, enter to confirm)\n",
@@ -39,7 +66,7 @@ export async function registryRemoveCommand(): Promise<void> {
     }
 
     const confirmed = await confirm({
-      message: `Are you sure you want to remove ${serversToRemove.length} server(s)?`,
+      message: `Are you sure you want to remove ${serversToRemove.length} server(s) from the ${target === "claude" ? "Claude" : "Codex"} registry?`,
       default: false,
     });
 
@@ -49,12 +76,21 @@ export async function registryRemoveCommand(): Promise<void> {
     }
 
     for (const serverName of serversToRemove) {
-      await removeServerFromRegistry(serverName);
-      console.log(
-        chalk.green(
-          `✓ Removed "${serverName}" from registry (~/.mcpkit/mcp-servers.json)`,
-        ),
-      );
+      if (target === "claude") {
+        await removeServerFromRegistry(serverName);
+        console.log(
+          chalk.green(
+            `✓ Removed "${serverName}" from Claude registry (~/.mcpkit/mcp-servers.json)`,
+          ),
+        );
+      } else {
+        await removeServerFromCodexRegistry(serverName);
+        console.log(
+          chalk.green(
+            `✓ Removed "${serverName}" from Codex registry (~/.mcpkit/codex-mcp-servers.toml)`,
+          ),
+        );
+      }
     }
   } catch (error) {
     throw error;

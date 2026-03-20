@@ -19,13 +19,6 @@ docs/
 .kilocode
 .claude
 .agent
-CLAUDE.md
-.mcp.json
-
-# Code analysis & vector memory
-.code-graph
-.vmem.*
-.vmem.yml
 
 # AI Agents
 .rulez/
@@ -34,9 +27,17 @@ CLAUDE.md
 .codex/
 .gemini/
 .qwen/
+.opencode/
+.mcp.json
 GEMINI.md
 QWEN.md
 AGENTS.md
+CLAUDE.md
+
 
 # build
 mcpkit
+# vmem
+.vmem/
+
+.codegraph/

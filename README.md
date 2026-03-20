@@ -1,15 +1,15 @@
 # mcpkit
 
-**MCP Server Configuration Manager** - A CLI tool to easily manage `.mcp.json` files for Model Context Protocol (MCP) servers.
+**MCP Server Configuration Manager** - A CLI tool to manage project-scoped MCP server configuration for both Claude Code and Codex CLI.
 
 ## Features
 
-- 🎯 **Interactive server selection** - Multi-select interface to choose from your registry
-- 📦 **Global registry** - Store server configurations once, use in any project
-- 🔄 **Project-level management** - Add/remove servers per project
-- ✅ **Smart validation** - Validates JSON syntax and server configurations
-- 🔌 **Multiple server types** - Supports both stdio and streaming MCP servers
-- 🎨 **User-friendly** - Clear instructions and helpful error messages
+- Interactive target selection for Claude Code, Codex CLI, or both
+- Separate native registries for Claude JSON and Codex TOML
+- Project-level management for `.mcp.json` and `.codex/config.toml`
+- Target flags for explicit workflows: `--claude` and `--codex`
+- Smart validation for both JSON and TOML MCP server definitions
+- Support for both stdio and streamable HTTP MCP servers
 
 ## Installation
 
@@ -23,7 +23,7 @@ cd mcpkit
 2. Install dependencies:
 
 ```bash
-bun install
+pnpm install
 ```
 
 3. Build the binary:
@@ -35,53 +35,101 @@ bun run build:binary
 4. Install globally:
 
 ```bash
-sudo mv mcpkit /usr/local/bin/
+sudo install -m 755 ./mcpkit /usr/local/bin/mcpkit
 ```
 
-Now you can use `mcpkit` from anywhere on your system. The command will run from your local development directory.
+Verify:
+
+```bash
+mcpkit --version
+```
+
+## Command Model
+
+`mcpkit` supports two target platforms:
+
+- **Claude Code**
+  - Registry: `~/.mcpkit/mcp-servers.json`
+  - Project config: `.mcp.json`
+- **Codex CLI**
+  - Registry: `~/.mcpkit/codex-mcp-servers.toml`
+  - Project config: `.codex/config.toml`
+
+Mutating commands support:
+
+- `--claude` for Claude only
+- `--codex` for Codex only
+- no flag: interactive target selection
+
+Read-only list commands support:
+
+- `mcpkit list` shows both project targets automatically
+- `mcpkit registry list` shows both registries automatically
 
 ## Quick Start
 
-### 1. Add servers to your global registry
+### 1. Add servers to your registry
+
+Claude registry entry:
 
 ```bash
-mcpkit registry add
+mcpkit registry add --claude
 ```
 
-This opens your editor where you can paste server configurations:
-
-**Stdio server example:**
-
-```json
-"playwright": {
-  "command": "npx",
-  "args": ["@playwright/mcp@latest"]
-}
-```
-
-**Streaming server example:**
+Example input:
 
 ```json
 "context7": {
-  "url": "https://api.context7.ai/mcp"
+  "command": "npx",
+  "args": ["-y", "@upstash/context7-mcp@latest"]
 }
 ```
 
-### 2. View your registry
+Codex registry entry:
+
+```bash
+mcpkit registry add --codex
+```
+
+Example input:
+
+```toml
+[mcp_servers.context7]
+command = "npx"
+args = ["-y", "@upstash/context7-mcp@latest"]
+```
+
+### 2. View your registries
 
 ```bash
 mcpkit registry list
 ```
 
+Filter to one target:
+
+```bash
+mcpkit registry list --claude
+mcpkit registry list --codex
+```
+
 ### 3. Initialize a project
 
-In your project directory:
+In your project root:
 
 ```bash
 mcpkit init
 ```
 
-This presents a multi-select interface to choose which servers from your registry to add to the project's `.mcp.json` file.
+This prompts you to choose:
+
+- Claude Code
+- Codex CLI
+- or both
+
+If you choose both, `mcpkit` will:
+
+1. prompt for Claude Code servers and write `.mcp.json`
+2. prompt for Codex CLI servers and write `.codex/config.toml`
 
 ### 4. View project servers
 
@@ -89,288 +137,309 @@ This presents a multi-select interface to choose which servers from your registr
 mcpkit list
 ```
 
+Filter to one target:
+
+```bash
+mcpkit list --claude
+mcpkit list --codex
+```
+
 ## Commands
 
 ### Project Commands
 
-These commands work with the `.mcp.json` file in your current directory.
+These commands operate on project-scoped files in the current directory.
 
 #### `mcpkit init`
 
-Create a new `.mcp.json` file by selecting servers from your registry.
+Create project MCP config for one or both targets.
 
 ```bash
 mcpkit init
+mcpkit init --claude
+mcpkit init --codex
 ```
 
-**Interactive features:**
+Behavior:
 
-- Multi-select checkbox interface
-- Merge or overwrite existing `.mcp.json`
-- Use arrow keys to navigate, space to select, enter to confirm
+- no flags: prompt for Claude, Codex, or both
+- `--claude`: create or update `.mcp.json`
+- `--codex`: create or update `.codex/config.toml`
 
 #### `mcpkit add`
 
-Interactively add servers from the registry to your project's `.mcp.json`.
+Add servers from the selected registry into the matching project config.
 
 ```bash
 mcpkit add
+mcpkit add --claude
+mcpkit add --codex
 ```
-
-Lists all servers available in the registry that are not yet in your project.
-Requires `.mcp.json` to exist (use `mcpkit init` first).
 
 #### `mcpkit edit`
 
-Add or edit a server directly to the current project's `.mcp.json`.
+Add or edit a single server directly in the selected project config.
 
 ```bash
 mcpkit edit
+mcpkit edit --claude
+mcpkit edit --codex
 ```
 
-Opens an editor to paste or edit server configuration. Creates `.mcp.json` if it doesn't exist.
+Input format:
+
+- Claude: JSON server definition
+- Codex: TOML `[mcp_servers.<name>]` definition
 
 #### `mcpkit remove`
 
-Remove servers from the current project's `.mcp.json`.
+Remove servers from the selected project config.
 
 ```bash
 mcpkit remove
+mcpkit remove --claude
+mcpkit remove --codex
 ```
-
-**Interactive features:**
-
-- Multi-select checkbox interface to choose servers to remove.
 
 #### `mcpkit list`
 
-Display all servers configured in the current project.
+List project-scoped MCP servers.
 
 ```bash
 mcpkit list
-
-# Show detailed configurations
 mcpkit list --verbose
+mcpkit list --claude
+mcpkit list --codex
 ```
+
+Behavior:
+
+- no flags: show both targets automatically
+- missing config files are shown as `Not configured`
 
 ### Registry Commands
 
-These commands work with your global registry at `~/.mcpkit/mcp-servers.json`.
+These commands operate on your global registries in `~/.mcpkit/`.
 
 #### `mcpkit registry add`
 
-Add a new server to your global registry.
+Add a server to the selected registry.
 
 ```bash
 mcpkit registry add
+mcpkit registry add --claude
+mcpkit registry add --codex
 ```
 
-Opens an editor where you can paste server configurations from MCP documentation.
+Behavior:
+
+- no flags: prompt for target
+- Claude: expects JSON
+- Codex: expects TOML
 
 #### `mcpkit registry remove`
 
-Remove servers from your global registry.
+Remove servers from the selected registry.
 
 ```bash
 mcpkit registry remove
+mcpkit registry remove --claude
+mcpkit registry remove --codex
 ```
-
-**Interactive features:**
-
-- Multi-select checkbox interface to choose servers to remove.
 
 #### `mcpkit registry list`
 
-Display all servers in your global registry.
+List registry-scoped MCP servers.
 
 ```bash
 mcpkit registry list
-
-# Show detailed configurations
 mcpkit registry list --verbose
+mcpkit registry list --claude
+mcpkit registry list --codex
 ```
+
+Behavior:
+
+- no flags: show both registries automatically
 
 ## File Locations
 
-- **Global registry**: `~/.mcpkit/mcp-servers.json`
-- **Project config**: `.mcp.json` (in your project directory)
+- Claude registry: `~/.mcpkit/mcp-servers.json`
+- Codex registry: `~/.mcpkit/codex-mcp-servers.toml`
+- Claude project config: `.mcp.json`
+- Codex project config: `.codex/config.toml`
 
-## Configuration Format
+## Configuration Formats
 
-### Registry Format (`~/.mcpkit/mcp-servers.json`)
+### Claude Registry Format
+
+File: `~/.mcpkit/mcp-servers.json`
 
 ```json
 {
   "servers": {
-    "playwright": {
-      "command": "npx",
-      "args": ["@playwright/mcp@latest"]
-    },
-    "chrome-devtools": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["chrome-devtools-mcp@latest"],
-      "env": {}
-    },
     "context7": {
-      "url": "https://api.context7.ai/mcp"
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp@latest"]
+    },
+    "sentry": {
+      "url": "https://mcp.sentry.dev/mcp"
     }
   }
 }
 ```
 
-### Project Format (`.mcp.json`)
+### Claude Project Format
+
+File: `.mcp.json`
 
 ```json
 {
   "mcpServers": {
-    "playwright": {
-      "command": "npx",
-      "args": ["@playwright/mcp@latest"]
-    },
     "context7": {
-      "url": "https://api.context7.ai/mcp"
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp@latest"]
     }
   }
 }
 ```
 
-## Server Types
+### Codex Registry Format
 
-### Stdio Servers
+File: `~/.mcpkit/codex-mcp-servers.toml`
 
-Use `command` and `args` fields:
+```toml
+[mcp_servers.context7]
+command = "npx"
+args = ["-y", "@upstash/context7-mcp@latest"]
 
-```json
-"server-name": {
-  "command": "npx",
-  "args": ["package-name@latest"],
-  "type": "stdio",
-  "env": {
-    "API_KEY": "your-key"
-  }
-}
+[mcp_servers.sentry]
+url = "https://mcp.sentry.dev/mcp"
 ```
 
-### Streaming Servers
+### Codex Project Format
 
-Use `url` field:
+File: `.codex/config.toml`
 
-```json
-"server-name": {
-  "url": "https://api.example.com/mcp"
-}
+```toml
+[mcp_servers.context7]
+command = "npx"
+args = ["-y", "@upstash/context7-mcp@latest"]
 ```
+
+`mcpkit` preserves unrelated existing Codex settings in `.codex/config.toml` and updates only the `mcp_servers` section.
 
 ## Common Workflows
 
-### Setting up a new project
+### Set up both Claude and Codex for a new project
 
 ```bash
-# Add servers to registry (one time)
-mcpkit registry add
-# (paste playwright config)
-
-mcpkit registry add
-# (paste chrome-devtools config)
-
-# In your project directory
 cd my-project
 mcpkit init
-# (select servers you need)
+```
 
-# Verify
+Choose both targets when prompted, then select servers for each target in sequence.
+
+### Add only a Codex MCP server to an existing project
+
+```bash
+mcpkit add --codex
+```
+
+### Edit a single Claude server directly
+
+```bash
+mcpkit edit --claude
+```
+
+### Show all configured servers for both targets
+
+```bash
 mcpkit list
 ```
 
-### Adding a server to an existing project
+### Show verbose Codex registry details
 
 ```bash
-# Option 1: Add from registry
-mcpkit add
-# (select additional servers to merge)
-
-# Option 2: Add/Edit directly
-mcpkit edit
-# (paste or edit server config)
-```
-
-### Managing your registry
-
-```bash
-# View all available servers
-mcpkit registry list
-
-# Add a new server
-mcpkit registry add
-
-# Remove unused servers
-mcpkit registry remove
-
-# View details
-mcpkit registry list --verbose
-```
-
-## Editor Configuration
-
-The `add` commands use your system's default editor. Set it with:
-
-```bash
-export EDITOR=nano    # or vim, code, etc.
+mcpkit registry list --codex --verbose
 ```
 
 ## Troubleshooting
 
 ### "No .mcp.json found in current directory"
 
-Run `mcpkit init` to create one, or `cd` to the correct project directory.
+Run:
+
+```bash
+mcpkit init --claude
+```
+
+or:
+
+```bash
+mcpkit init
+```
+
+### "No .codex/config.toml found in current directory"
+
+Run:
+
+```bash
+mcpkit init --codex
+```
+
+or:
+
+```bash
+mcpkit init
+```
 
 ### "No MCP servers in registry"
 
-Add servers to your registry first:
+Add servers first:
 
 ```bash
-mcpkit registry add
+mcpkit registry add --claude
+mcpkit registry add --codex
 ```
 
-### "Invalid JSON syntax"
+### Invalid JSON or TOML input
 
-The tool validates JSON as you paste it. Common issues:
+`mcpkit` validates input before writing files.
 
-- Missing quotes around keys
-- Trailing commas
-- Unmatched braces
+Common JSON issues:
+
+- missing quotes around keys
+- trailing commas
+- unmatched braces
+
+Common TOML issues:
+
+- missing `[mcp_servers.<name>]` table header
+- invalid array syntax
+- malformed quotes
 
 ### Permission errors
 
-If you see permission errors, check file/directory permissions:
+Check registry file and directory permissions:
 
 ```bash
 chmod 644 ~/.mcpkit/mcp-servers.json
+chmod 644 ~/.mcpkit/codex-mcp-servers.toml
 chmod 755 ~/.mcpkit
 ```
 
 ## Development
 
 ```bash
-# Clone the repository
 git clone https://github.com/tk-425/mcpkit-cli.git
 cd mcpkit
 
-# Install dependencies
-npm install
+pnpm install
+pnpm build
+pnpm test
 
-# Build
-npm run build
-
-# Run locally
-node dist/index.js
-
-# Run tests
-npm test
-
-# Link for local testing
-npm link
+bun run build:binary
 ```
 
 ## License
@@ -379,7 +448,7 @@ ISC
 
 ## Contributing
 
-Issues and pull requests are welcome!
+Issues and pull requests are welcome.
 
 ## Links
 
