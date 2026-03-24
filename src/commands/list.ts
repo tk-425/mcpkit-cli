@@ -92,7 +92,7 @@ export async function listCommand(options: ListCommandOptions): Promise<void> {
       if (projectConfigExists()) {
         const projectConfig = await readProjectConfig();
         renderClaudeSection(
-          Object.keys(projectConfig.mcpServers),
+          Object.keys(projectConfig.mcpServers).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })),
           projectConfig,
           options.verbose,
         );
@@ -109,7 +109,7 @@ export async function listCommand(options: ListCommandOptions): Promise<void> {
       if (codexProjectConfigExists()) {
         const projectConfig = await readCodexProjectConfig();
         renderCodexSection(
-          Object.keys(ensureCodexMcpServers(projectConfig)),
+          Object.keys(ensureCodexMcpServers(projectConfig)).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })),
           projectConfig,
           options.verbose,
         );

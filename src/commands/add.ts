@@ -52,7 +52,7 @@ async function runClaudeAddFlow(): Promise<void> {
   const projectConfig = await readProjectConfig();
   const registry = await readRegistry();
   const projectServerNames = Object.keys(projectConfig.mcpServers);
-  const registryServerNames = Object.keys(registry.servers);
+  const registryServerNames = Object.keys(registry.servers).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
   const availableServers = registryServerNames.filter(
     (name) => !projectServerNames.includes(name),
   );
@@ -102,7 +102,7 @@ async function runCodexAddFlow(): Promise<void> {
   const registryServers = ensureCodexMcpServers(registry);
   const availableServers = Object.keys(registryServers).filter(
     (name) => !(name in projectServers),
-  );
+  ).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
 
   if (availableServers.length === 0) {
     console.log(chalk.yellow("No new Codex CLI servers available to add."));

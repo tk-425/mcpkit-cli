@@ -76,7 +76,7 @@ export async function registryListCommand(options: RegistryListCommandOptions): 
 
     if (showClaude) {
       const registry = await readRegistry();
-      renderClaudeRegistry(Object.keys(registry.servers), registry, options.verbose);
+      renderClaudeRegistry(Object.keys(registry.servers).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })), registry, options.verbose);
     }
 
     if (showClaude && showCodex) {
@@ -86,7 +86,7 @@ export async function registryListCommand(options: RegistryListCommandOptions): 
     if (showCodex) {
       const registry = await readCodexRegistry();
       renderCodexRegistry(
-        Object.keys(ensureCodexMcpServers(registry)),
+        Object.keys(ensureCodexMcpServers(registry)).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })),
         registry,
         options.verbose,
       );

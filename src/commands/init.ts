@@ -44,7 +44,7 @@ async function promptServerSelection(
 
 async function runClaudeInitFlow(): Promise<void> {
   const registry = await readRegistry();
-  const serverNames = Object.keys(registry.servers);
+  const serverNames = Object.keys(registry.servers).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
 
   if (serverNames.length === 0) {
     console.log(chalk.yellow("No Claude Code MCP servers in registry."));
@@ -119,7 +119,7 @@ async function runClaudeInitFlow(): Promise<void> {
 async function runCodexInitFlow(): Promise<void> {
   const registry = await readCodexRegistry();
   const registryServers = ensureCodexMcpServers(registry);
-  const serverNames = Object.keys(registryServers);
+  const serverNames = Object.keys(registryServers).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
 
   if (serverNames.length === 0) {
     console.log(chalk.yellow("No Codex CLI MCP servers in registry."));

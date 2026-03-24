@@ -48,7 +48,7 @@ async function runClaudeRemoveFlow(): Promise<void> {
   }
 
   const config = await readProjectConfig();
-  const serverNames = Object.keys(config.mcpServers);
+  const serverNames = Object.keys(config.mcpServers).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
 
   if (serverNames.length === 0) {
     console.log(chalk.yellow("No Claude Code MCP servers found in .mcp.json"));
@@ -93,7 +93,7 @@ async function runCodexRemoveFlow(): Promise<void> {
   }
 
   const config = await readCodexProjectConfig();
-  const serverNames = Object.keys(ensureCodexMcpServers(config));
+  const serverNames = Object.keys(ensureCodexMcpServers(config)).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
 
   if (serverNames.length === 0) {
     console.log(chalk.yellow("No Codex CLI MCP servers found in .codex/config.toml"));
