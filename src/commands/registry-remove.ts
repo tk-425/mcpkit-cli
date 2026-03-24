@@ -23,8 +23,8 @@ export async function registryRemoveCommand(options: TargetOptions): Promise<voi
 
     const serverNames =
       target === "claude"
-        ? Object.keys((await readRegistry()).servers)
-        : Object.keys(ensureCodexMcpServers(await readCodexRegistry()));
+        ? Object.keys((await readRegistry()).servers).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
+        : Object.keys(ensureCodexMcpServers(await readCodexRegistry())).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
 
     if (serverNames.length === 0) {
       console.log(
