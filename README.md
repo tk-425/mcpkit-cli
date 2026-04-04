@@ -220,6 +220,26 @@ mcpkit add --claude
 mcpkit add --codex
 ```
 
+#### `mcpkit update`
+
+Refresh existing project MCP server entries from the matching registry using the current `mcpkit` emission rules.
+
+```bash
+mcpkit update
+mcpkit update --claude
+mcpkit update --codex
+```
+
+Behavior:
+
+- only touches the current directory
+- updates only targets whose project config already exists
+- if neither `.mcp.json` nor `.codex/config.toml` exists, tells you to run `mcpkit init` first
+- refreshes only server names already present in the project config
+- preserves project entries that are missing from the registry and reports them at the end
+- preserves project entries that still cannot be refreshed safely and reports them at the end
+- generates `.mcpkit/bin/*` and `.gitignore` entries when the refreshed project state uses wrappers
+
 #### `mcpkit edit`
 
 Add or edit a single server directly in the selected project config.
@@ -398,6 +418,14 @@ Choose both targets when prompted, then select servers for each target in sequen
 ```bash
 mcpkit add --codex
 ```
+
+### Refresh an older project to current wrapper behavior
+
+```bash
+mcpkit update
+```
+
+This re-reads the server names already present in the project config from the matching `~/.mcpkit/` registry and refreshes them in place without adding new servers.
 
 ### Edit a single Claude server directly
 
