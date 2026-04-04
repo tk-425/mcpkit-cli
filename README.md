@@ -220,14 +220,14 @@ mcpkit add --claude
 mcpkit add --codex
 ```
 
-#### `mcpkit update`
+#### `mcpkit refresh`
 
 Refresh existing project MCP server entries from the matching registry using the current `mcpkit` emission rules.
 
 ```bash
-mcpkit update
-mcpkit update --claude
-mcpkit update --codex
+mcpkit refresh
+mcpkit refresh --claude
+mcpkit refresh --codex
 ```
 
 Behavior:
@@ -422,7 +422,7 @@ mcpkit add --codex
 ### Refresh an older project to current wrapper behavior
 
 ```bash
-mcpkit update
+mcpkit refresh
 ```
 
 This re-reads the server names already present in the project config from the matching `~/.mcpkit/` registry and refreshes them in place without adding new servers.

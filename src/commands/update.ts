@@ -207,9 +207,9 @@ async function runCodexUpdateFlow(): Promise<void> {
 }
 
 /**
- * Command handler for 'mcpkit update'
+ * Command handler for 'mcpkit refresh'
  */
-export async function updateCommand(options: TargetOptions): Promise<void> {
+export async function refreshCommand(options: TargetOptions): Promise<void> {
   const requestedTargets = getRequestedTargets(options);
 
   if (requestedTargets.length === 0) {

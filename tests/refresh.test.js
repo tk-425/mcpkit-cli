@@ -3,7 +3,7 @@ import os from "os";
 import path from "path";
 import { jest } from "@jest/globals";
 
-import { updateCommand } from "../dist/commands/update.js";
+import { refreshCommand } from "../dist/commands/update.js";
 import {
   writeCodexProjectConfig,
   writeCodexRegistry,
@@ -39,7 +39,7 @@ async function captureLogs(run) {
   return messages.join("\n");
 }
 
-describe("update command", () => {
+describe("refresh command", () => {
   let originalCwd;
   let originalHome;
   let tempRoot;
@@ -49,7 +49,7 @@ describe("update command", () => {
   beforeEach(async () => {
     originalCwd = process.cwd();
     originalHome = process.env.HOME;
-    tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "mcpkit-update-test-"));
+    tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "mcpkit-refresh-test-"));
     projectDir = path.join(tempRoot, "project");
     homeDir = path.join(tempRoot, "home");
     await fs.mkdir(projectDir, { recursive: true });
@@ -71,7 +71,7 @@ describe("update command", () => {
 
   test("prints init guidance when no project config exists", async () => {
     const output = await captureLogs(async () => {
-      await updateCommand({});
+      await refreshCommand({});
     });
 
     expect(output).toContain('Run "mcpkit init" first.');
@@ -124,7 +124,7 @@ describe("update command", () => {
     });
 
     const output = await captureLogs(async () => {
-      await updateCommand({});
+      await refreshCommand({});
     });
 
     const projectConfig = JSON.parse(
@@ -181,7 +181,7 @@ describe("update command", () => {
     });
 
     const output = await captureLogs(async () => {
-      await updateCommand({ codex: true });
+      await refreshCommand({ codex: true });
     });
 
     const content = await fs.readFile(
@@ -244,7 +244,7 @@ describe("update command", () => {
       },
     });
 
-    await updateCommand({});
+    await refreshCommand({});
 
     const claudeConfig = JSON.parse(
       await fs.readFile(path.join(projectDir, ".mcp.json"), "utf-8"),

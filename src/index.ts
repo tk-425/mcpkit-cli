@@ -11,7 +11,7 @@ import { initCommand } from "./commands/init.js";
 import { editCommand } from "./commands/edit.js";
 import { addCommand } from "./commands/add.js";
 import { removeCommand } from "./commands/remove.js";
-import { updateCommand } from "./commands/update.js";
+import { refreshCommand } from "./commands/update.js";
 
 const program = new Command();
 
@@ -54,12 +54,12 @@ withTargetOptions(
   .description("Remove MCP servers from the project .mcp.json")
 ).action(removeCommand);
 
-// Update command
+// Refresh command
 withTargetOptions(
   program
-    .command("update")
+    .command("refresh")
   .description("Refresh existing project MCP servers from the registry")
-).action(updateCommand);
+).action(refreshCommand);
 
 // List command
 withTargetOptions(
