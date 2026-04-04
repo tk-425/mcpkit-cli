@@ -133,7 +133,6 @@ function validateStringRecord(
 
   return { valid: true };
 }
-
 export function validateCodexServerConfig(config: any): { valid: boolean; error?: string } {
   if (typeof config !== 'object' || config === null || Array.isArray(config)) {
     return { valid: false, error: 'Server configuration must be an object' };

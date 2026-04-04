@@ -15,6 +15,28 @@ import {
   type TargetOptions,
 } from "../utils/targets.js";
 import { resolveProjectTargets } from "./project-targets.js";
+import {
+  cleanupLoadEnvIfUnused,
+  cleanupUnusedWrapper,
+  collectReferencedWrapperPaths,
+} from "../utils/project-runtime.js";
+import { getProjectRuntimeBinDirPath } from "../utils/paths.js";
+import { resolve } from "path";
+
+function getWrapperCommandPath(command: unknown): string | null {
+  if (typeof command !== "string") {
+    return null;
+  }
+
+  const runtimeBinDir = resolve(getProjectRuntimeBinDirPath());
+  const resolvedCommand = resolve(command);
+
+  if (resolvedCommand.startsWith(`${runtimeBinDir}/`)) {
+    return resolvedCommand;
+  }
+
+  return null;
+}
 
 async function promptServerRemoval(
   serverNames: string[],
@@ -76,7 +98,17 @@ async function runClaudeRemoveFlow(): Promise<void> {
   }
 
   for (const serverName of serversToRemove) {
+    const wrapperPath = getWrapperCommandPath(config.mcpServers[serverName]?.command);
     await removeServerFromProject(serverName);
+
+    if (wrapperPath && !wrapperPath.endsWith("/load-env")) {
+      const referencedPaths = await collectReferencedWrapperPaths();
+      if (!referencedPaths.has(wrapperPath)) {
+        await cleanupUnusedWrapper(wrapperPath);
+        await cleanupLoadEnvIfUnused();
+      }
+    }
+
     console.log(chalk.green(`✓ Removed "${serverName}" from .mcp.json`));
   }
 }
@@ -121,7 +153,17 @@ async function runCodexRemoveFlow(): Promise<void> {
   }
 
   for (const serverName of serversToRemove) {
+    const wrapperPath = getWrapperCommandPath(ensureCodexMcpServers(config)[serverName]?.command);
     await removeServerFromCodexProject(serverName);
+
+    if (wrapperPath && !wrapperPath.endsWith("/load-env")) {
+      const referencedPaths = await collectReferencedWrapperPaths();
+      if (!referencedPaths.has(wrapperPath)) {
+        await cleanupUnusedWrapper(wrapperPath);
+        await cleanupLoadEnvIfUnused();
+      }
+    }
+
     console.log(
       chalk.green(`✓ Removed "${serverName}" from .codex/config.toml`),
     );

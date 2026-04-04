@@ -17,6 +17,8 @@ import {
   type TargetOptions,
 } from "../utils/targets.js";
 import { resolveProjectTargets } from "./project-targets.js";
+import { emitClaudeProjectServer, emitCodexProjectServer } from "../utils/project-emitter.js";
+import { ensureMcpkitGitignoreBlock } from "../utils/gitignore.js";
 
 async function promptServerSelection(
   serverNames: string[],
@@ -72,8 +74,32 @@ async function runClaudeAddFlow(): Promise<void> {
     return;
   }
 
+  let usedWrapper = false;
+  const skippedServers: string[] = [];
+  let addedCount = 0;
+
   for (const serverName of selectedServers) {
-    projectConfig.mcpServers[serverName] = registry.servers[serverName];
+    const emitted = await emitClaudeProjectServer(serverName, registry.servers[serverName]);
+    if (emitted.skipped) {
+      skippedServers.push(emitted.reason ?? `Skipped "${serverName}"`);
+      continue;
+    }
+
+    projectConfig.mcpServers[serverName] = emitted.config!;
+    usedWrapper = usedWrapper || emitted.usedWrapper;
+    addedCount += 1;
+  }
+
+  if (usedWrapper) {
+    await ensureMcpkitGitignoreBlock();
+  }
+
+  if (addedCount === 0) {
+    console.log(chalk.yellow("No Claude Code servers were added."));
+    skippedServers.forEach((message) => {
+      console.log(chalk.yellow(`  • ${message}`));
+    });
+    return;
   }
 
   await writeProjectConfig(projectConfig);
@@ -83,6 +109,12 @@ async function runClaudeAddFlow(): Promise<void> {
       `\n✓ Added ${selectedServers.length} Claude server${selectedServers.length === 1 ? "" : "s"} to .mcp.json`,
     ),
   );
+  if (skippedServers.length > 0) {
+    console.log(chalk.yellow("\nSkipped Claude Code servers:"));
+    skippedServers.forEach((message) => {
+      console.log(chalk.yellow(`  • ${message}`));
+    });
+  }
 }
 
 async function runCodexAddFlow(): Promise<void> {
@@ -119,9 +151,33 @@ async function runCodexAddFlow(): Promise<void> {
     return;
   }
 
-  selectedServers.forEach((serverName) => {
-    projectServers[serverName] = registryServers[serverName];
-  });
+  let usedWrapper = false;
+  const skippedServers: string[] = [];
+  let addedCount = 0;
+
+  for (const serverName of selectedServers) {
+    const emitted = await emitCodexProjectServer(serverName, registryServers[serverName]);
+    if (emitted.skipped) {
+      skippedServers.push(emitted.reason ?? `Skipped "${serverName}"`);
+      continue;
+    }
+
+    projectServers[serverName] = emitted.config!;
+    usedWrapper = usedWrapper || emitted.usedWrapper;
+    addedCount += 1;
+  }
+
+  if (usedWrapper) {
+    await ensureMcpkitGitignoreBlock();
+  }
+
+  if (addedCount === 0) {
+    console.log(chalk.yellow("No Codex CLI servers were added."));
+    skippedServers.forEach((message) => {
+      console.log(chalk.yellow(`  • ${message}`));
+    });
+    return;
+  }
 
   await writeCodexProjectConfig(projectConfig);
 
@@ -130,6 +186,12 @@ async function runCodexAddFlow(): Promise<void> {
       `\n✓ Added ${selectedServers.length} Codex server${selectedServers.length === 1 ? "" : "s"} to .codex/config.toml`,
     ),
   );
+  if (skippedServers.length > 0) {
+    console.log(chalk.yellow("\nSkipped Codex CLI servers:"));
+    skippedServers.forEach((message) => {
+      console.log(chalk.yellow(`  • ${message}`));
+    });
+  }
 }
 
 /**
