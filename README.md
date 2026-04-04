@@ -7,9 +7,53 @@
 - Interactive target selection for Claude Code, Codex CLI, or both
 - Separate native registries for Claude JSON and Codex TOML
 - Project-level management for `.mcp.json` and `.codex/config.toml`
+- Optional project-local wrapper emission under `.mcpkit/bin/` for servers that need deterministic env loading
 - Target flags for explicit workflows: `--claude` and `--codex`
 - Smart validation for both JSON and TOML MCP server definitions
 - Support for both stdio and streamable HTTP MCP servers
+
+## Project Runtime Wrappers
+
+Some MCP servers rely on env-driven startup behavior that is not consistently handled across project MCP clients. For those servers, `mcpkit` can emit a project-local wrapper command instead of copying the raw launch config into the project file.
+
+Current behavior:
+
+- if a selected server does not use `${VAR}`, `mcpkit` emits it directly
+- if a selected server uses `${VAR}` in an easy stdio launcher shape, `mcpkit` wraps it automatically under `.mcpkit/bin/`
+- if a selected server uses `${VAR}` in a remote/http shape that cannot be converted safely yet, `mcpkit` warns and skips it instead of emitting raw interpolation into project config
+
+Rule of thumb:
+
+- `${VAR}` found in a selected stdio launcher config -> wrap it
+- `${VAR}` found in a selected remote/http config -> skip it until `mcpkit` has a safe conversion rule for that server
+- no `${VAR}` -> emit the native config directly
+
+When wrapper-backed emission is used:
+
+- Claude still receives native `.mcp.json`
+- Codex still receives native `.codex/config.toml`
+- the emitted `command` points at a generated wrapper under `.mcpkit/bin/`
+
+Generated runtime layout:
+
+```text
+<project>/
+  .mcp.json
+  .codex/
+    config.toml
+  .mcpkit/
+    bin/
+      load-env
+      <server>
+```
+
+Notes:
+
+- `.mcpkit/` is generated runtime state and `mcpkit` adds it to `.gitignore` through a managed block
+- `load-env` is a macOS-oriented first-pass helper for best-effort Keychain-backed env loading
+- per-server wrappers still validate required env vars before launching the underlying MCP command
+- `mcpkit remove` cleans up unreferenced per-server wrappers conservatively, but does not remove `.mcpkit/` or the managed `.gitignore` block automatically in the first pass
+- `mcpkit edit` is not yet wrapper-aware; editing emitted wrapper-backed entries directly can drift from registry metadata
 
 ## Installation
 
@@ -201,6 +245,8 @@ mcpkit remove --claude
 mcpkit remove --codex
 ```
 
+For wrapper-backed servers, `remove` also deletes the per-server wrapper script when it is no longer referenced by any remaining Claude or Codex project config in the current project.
+
 #### `mcpkit list`
 
 List project-scoped MCP servers.
@@ -237,6 +283,8 @@ Behavior:
 - Claude: expects JSON
 - Codex: expects TOML
 
+Wrapper generation is internal to `mcpkit`. Registry entries remain plain native MCP config, and `mcpkit` decides at project-emission time whether a selected server can be wrapped safely.
+
 #### `mcpkit registry remove`
 
 Remove servers from the selected registry.
@@ -257,6 +305,11 @@ mcpkit registry list --verbose
 mcpkit registry list --claude
 mcpkit registry list --codex
 ```
+
+## Implementation Docs
+
+- [Project MCP Wrapper Revised Plan](./docs/project-mcp-wrapper-revised-plan.md)
+- [Project MCP Wrapper Revised Implementation](./docs/project-mcp-wrapper-revised-implementation.md)
 
 Behavior:
 
