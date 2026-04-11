@@ -8,6 +8,7 @@ import {
   writeCodexProjectConfig,
   writeCodexRegistry,
 } from "../dist/utils/codex-config.js";
+import { writeLoadEnvConfig } from "../dist/utils/load-env-config.js";
 import { writeProjectConfig } from "../dist/utils/project-config.js";
 import { writeRegistry } from "../dist/utils/registry.js";
 
@@ -258,5 +259,45 @@ describe("refresh command", () => {
       await canonicalizePath(path.join(projectDir, ".mcpkit/bin/tavily-mcp")),
     );
     expect(codexContent).toContain(path.join(projectDir, ".mcpkit/bin/zai-mcp-server"));
+  });
+
+  test("refresh regenerates load-env with configured global env vars", async () => {
+    await writeRegistry({
+      servers: {
+        "tavily-mcp": {
+          command: "npx",
+          args: ["-y", "tavily-mcp@latest"],
+          env: {
+            TAVILY_API_KEY: "${TAVILY_API_KEY}",
+          },
+        },
+      },
+    });
+
+    await writeProjectConfig({
+      mcpServers: {
+        "tavily-mcp": {
+          command: "npx",
+          args: ["-y", "tavily-mcp@latest"],
+          env: {
+            TAVILY_API_KEY: "${TAVILY_API_KEY}",
+          },
+        },
+      },
+    });
+
+    await refreshCommand({});
+    const loadEnvPath = path.join(projectDir, ".mcpkit/bin/load-env");
+    const initialContent = await fs.readFile(loadEnvPath, "utf-8");
+
+    await writeLoadEnvConfig({
+      extraEnvVars: ["ZED_API_KEY"],
+    });
+
+    await refreshCommand({});
+    const refreshedContent = await fs.readFile(loadEnvPath, "utf-8");
+
+    expect(initialContent).not.toContain("ZED_API_KEY");
+    expect(refreshedContent).toContain("ZED_API_KEY");
   });
 });

@@ -1,4 +1,5 @@
 import {
+  BUILT_IN_LOAD_ENV_KEYS,
   buildLoadEnvScript,
   buildWrapperScript,
   shellQuote,
@@ -10,11 +11,24 @@ describe("wrapper template builders", () => {
   });
 
   test("buildLoadEnvScript includes standard env loading and exec", () => {
-    const script = buildLoadEnvScript();
+    const script = buildLoadEnvScript(BUILT_IN_LOAD_ENV_KEYS);
 
     expect(script).toContain("CONTEXT_7_KEY");
+    expect(script).toContain("STITCH_API_KEY");
     expect(script).toContain("TAVILY_API_KEY");
     expect(script).toContain('exec "$@"');
+  });
+
+  test("buildLoadEnvScript emits configured env vars once alongside built-ins", () => {
+    const script = buildLoadEnvScript([
+      ...BUILT_IN_LOAD_ENV_KEYS,
+      "ZED_API_KEY",
+      "TAVILY_API_KEY",
+    ]);
+
+    expect(script).toContain("ZED_API_KEY");
+    expect(script.match(/find-generic-password -a "\$USER" -s 'TAVILY_API_KEY'/g)).toHaveLength(1);
+    expect(script).toContain('nvidia-nim-api-key');
   });
 
   test("buildWrapperScript includes required env checks and static env exports", () => {

@@ -8,6 +8,7 @@ import {
   collectReferencedWrapperPaths,
   ensureServerWrapper,
 } from "../dist/utils/project-runtime.js";
+import { writeLoadEnvConfig } from "../dist/utils/load-env-config.js";
 
 async function canonicalizePath(targetPath) {
   try {
@@ -24,16 +25,27 @@ async function canonicalizePath(targetPath) {
 
 describe("project runtime utilities", () => {
   let originalCwd;
+  let originalHome;
   let tempDir;
+  let homeDir;
 
   beforeEach(async () => {
     originalCwd = process.cwd();
+    originalHome = process.env.HOME;
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "mcpkit-runtime-test-"));
+    homeDir = path.join(tempDir, "home");
+    await fs.mkdir(homeDir, { recursive: true });
+    process.env.HOME = homeDir;
     process.chdir(tempDir);
   });
 
   afterEach(async () => {
     process.chdir(originalCwd);
+    if (originalHome === undefined) {
+      delete process.env.HOME;
+    } else {
+      process.env.HOME = originalHome;
+    }
     await fs.rm(tempDir, { recursive: true, force: true });
   });
 
@@ -73,6 +85,38 @@ describe("project runtime utilities", () => {
 
     const wrapperContent = await fs.readFile(result.wrapperPath, "utf-8");
     expect(wrapperContent).toContain('"authorization:Bearer ${N8N_MCP_KEY}"');
+  });
+
+  test("rewrites load-env content when global config changes", async () => {
+    await ensureServerWrapper({
+      scriptName: "tavily-mcp",
+      requiredEnv: ["TAVILY_API_KEY"],
+      exec: {
+        command: "npx",
+        args: ["-y", "tavily-mcp@latest"],
+      },
+    });
+
+    const loadEnvPath = path.join(tempDir, ".mcpkit/bin/load-env");
+    const initialContent = await fs.readFile(loadEnvPath, "utf-8");
+
+    await writeLoadEnvConfig({
+      extraEnvVars: ["ZED_API_KEY"],
+    });
+
+    await ensureServerWrapper({
+      scriptName: "tavily-mcp",
+      requiredEnv: ["TAVILY_API_KEY"],
+      exec: {
+        command: "npx",
+        args: ["-y", "tavily-mcp@latest"],
+      },
+    });
+
+    const updatedContent = await fs.readFile(loadEnvPath, "utf-8");
+
+    expect(initialContent).not.toContain("ZED_API_KEY");
+    expect(updatedContent).toContain("ZED_API_KEY");
   });
 
   test("collects referenced wrapper paths from project configs", async () => {
