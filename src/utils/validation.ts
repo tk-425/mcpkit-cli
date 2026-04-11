@@ -29,6 +29,27 @@ export function validateServerName(name: string): { valid: boolean; error?: stri
 }
 
 /**
+ * Validate a persisted env var name used by load-env config.
+ */
+export function validateEnvVarName(name: string): { valid: boolean; error?: string } {
+  const trimmed = name.trim();
+
+  if (!trimmed) {
+    return { valid: false, error: 'Environment variable name cannot be empty' };
+  }
+
+  if (!/^[A-Z_][A-Z0-9_]*$/.test(trimmed)) {
+    return {
+      valid: false,
+      error:
+        'Environment variable name must start with a letter or underscore and contain only uppercase letters, numbers, and underscores',
+    };
+  }
+
+  return { valid: true };
+}
+
+/**
  * Validate server configuration
  */
 export function validateServerConfig(config: any): { valid: boolean; error?: string } {

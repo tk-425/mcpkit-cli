@@ -51,6 +51,7 @@ Notes:
 
 - `.mcpkit/` is generated runtime state and `mcpkit` adds it to `.gitignore` through a managed block
 - `load-env` is a macOS-oriented first-pass helper for best-effort Keychain-backed env loading
+- extra supported Keychain env var names are managed globally in `~/.mcpkit/load-env.json`
 - per-server wrappers still validate required env vars before launching the underlying MCP command
 - `mcpkit remove` cleans up unreferenced per-server wrappers conservatively, but does not remove `.mcpkit/` or the managed `.gitignore` block automatically in the first pass
 - `mcpkit edit` is not yet wrapper-aware; editing emitted wrapper-backed entries directly can drift from registry metadata
@@ -109,6 +110,14 @@ Read-only list commands support:
 
 - `mcpkit list` shows both project targets automatically
 - `mcpkit registry list` shows both registries automatically
+
+Global `load-env` config commands:
+
+- `mcpkit env add <NAME>`
+- `mcpkit env list`
+- `mcpkit env remove <NAME>`
+
+These commands operate on `~/.mcpkit/load-env.json` and do not take `--claude` or `--codex`.
 
 ## Quick Start
 
@@ -239,6 +248,7 @@ Behavior:
 - preserves project entries that are missing from the registry and reports them at the end
 - preserves project entries that still cannot be refreshed safely and reports them at the end
 - generates `.mcpkit/bin/*` and `.gitignore` entries when the refreshed project state uses wrappers
+- regenerates the current project's `.mcpkit/bin/load-env`, so changes in `~/.mcpkit/load-env.json` take effect after `refresh`
 
 #### `mcpkit edit`
 
@@ -325,6 +335,49 @@ mcpkit registry list --verbose
 mcpkit registry list --claude
 mcpkit registry list --codex
 ```
+
+### Global `load-env` Commands
+
+These commands operate on the global `load-env` config in `~/.mcpkit/load-env.json`.
+
+#### `mcpkit env add`
+
+Add a supported env var name to the global `load-env` config.
+
+```bash
+mcpkit env add STITCH_API_KEY
+```
+
+Behavior:
+
+- validates that the name is a safe env var identifier such as `STITCH_API_KEY`
+- stores only the env var name, never the secret value
+- avoids duplicates if the same name is already configured
+- does not modify project-local runtime by itself
+
+#### `mcpkit env list`
+
+List configured extra env var names for `load-env`.
+
+```bash
+mcpkit env list
+```
+
+#### `mcpkit env remove`
+
+Remove a configured env var name from the global `load-env` config.
+
+```bash
+mcpkit env remove STITCH_API_KEY
+```
+
+Important:
+
+- `mcpkit env add/remove` changes only `~/.mcpkit/load-env.json`
+- run `mcpkit refresh` in a project to regenerate that project's `.mcpkit/bin/load-env`
+- the current implementation is macOS-first and uses Keychain lookup through the `security` CLI
+- most configured names map directly to `-s <ENV_NAME>` and `-a "$USER"`
+- `NVIDIA_NIM_API_KEY` remains a preserved special-case lookup in the generated script
 
 ## Implementation Docs
 
@@ -426,6 +479,17 @@ mcpkit refresh
 ```
 
 This re-reads the server names already present in the project config from the matching `~/.mcpkit/` registry and refreshes them in place without adding new servers.
+
+It also regenerates the current project's `.mcpkit/bin/load-env`, so changes made through `mcpkit env add` or `mcpkit env remove` are applied after `refresh`.
+
+### Add a new Keychain-backed env var name for wrapper-backed servers
+
+```bash
+mcpkit env add STITCH_API_KEY
+mcpkit refresh
+```
+
+This updates the global `load-env` config first, then regenerates the current project's local runtime so wrapper-backed servers can attempt Keychain lookup for `STITCH_API_KEY`.
 
 ### Edit a single Claude server directly
 

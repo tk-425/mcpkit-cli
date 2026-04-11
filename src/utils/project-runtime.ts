@@ -14,7 +14,12 @@ import {
   projectConfigExists,
   readProjectConfig,
 } from './project-config.js';
-import { buildLoadEnvScript, buildWrapperScript } from './wrapper-templates.js';
+import { listConfiguredLoadEnvVars } from './load-env-config.js';
+import {
+  BUILT_IN_LOAD_ENV_KEYS,
+  buildLoadEnvScript,
+  buildWrapperScript,
+} from './wrapper-templates.js';
 import type { WrapperConfig } from './wrapper-types.js';
 
 export interface RuntimeWriteResult {
@@ -69,7 +74,9 @@ export async function writeExecutableFile(path: string, content: string): Promis
 export async function ensureLoadEnvScript(): Promise<{ wroteRuntime: boolean; wroteLoadEnv: boolean; path: string }> {
   const wroteRuntime = await ensureProjectRuntimeDirs();
   const path = getProjectWrapperPath('load-env');
-  const wroteLoadEnv = await writeExecutableFile(path, buildLoadEnvScript());
+  const configuredNames = await listConfiguredLoadEnvVars();
+  const loadEnvNames = [...new Set([...BUILT_IN_LOAD_ENV_KEYS, ...configuredNames])].sort();
+  const wroteLoadEnv = await writeExecutableFile(path, buildLoadEnvScript(loadEnvNames));
 
   return { wroteRuntime, wroteLoadEnv, path };
 }

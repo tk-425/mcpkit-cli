@@ -12,6 +12,9 @@ import { editCommand } from "./commands/edit.js";
 import { addCommand } from "./commands/add.js";
 import { removeCommand } from "./commands/remove.js";
 import { refreshCommand } from "./commands/update.js";
+import { envAddCommand } from "./commands/env-add.js";
+import { envListCommand } from "./commands/env-list.js";
+import { envRemoveCommand } from "./commands/env-remove.js";
 
 const program = new Command();
 
@@ -92,6 +95,28 @@ withTargetOptions(
   .description("Display all MCP servers in the registry")
   .option("-v, --verbose", "Show detailed server configurations")
 ).action(registryListCommand);
+
+// Global load-env config subcommands
+const env = program
+  .command("env")
+  .description("Manage global load-env environment variables");
+
+env
+  .command("add")
+  .description("Add an environment variable name to the global load-env config")
+  .argument("<name>", "Environment variable name to add")
+  .action(envAddCommand);
+
+env
+  .command("list")
+  .description("List environment variable names in the global load-env config")
+  .action(envListCommand);
+
+env
+  .command("remove")
+  .description("Remove an environment variable name from the global load-env config")
+  .argument("<name>", "Environment variable name to remove")
+  .action(envRemoveCommand);
 
 // Handle graceful exit
 try {

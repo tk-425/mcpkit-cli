@@ -41,6 +41,7 @@ mcpkit
 .vmem/
 
 .codegraph/
+.docs/
 
 # BEGIN MCPKIT
 # mcpkit generated local MCP wrappers
