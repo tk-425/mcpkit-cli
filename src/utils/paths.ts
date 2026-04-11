@@ -30,13 +30,6 @@ export function getCodexRegistryPath(): string {
 }
 
 /**
- * Get the path to the configurable load-env vars file (~/.mcpkit/load-env.json)
- */
-export function getLoadEnvConfigPath(): string {
-  return join(getRegistryDir(), 'load-env.json');
-}
-
-/**
  * Get the path to the Claude project config file (.mcp.json in current directory)
  */
 export function getClaudeProjectConfigPath(): string {

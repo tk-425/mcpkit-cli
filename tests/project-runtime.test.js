@@ -3,12 +3,13 @@ import os from "os";
 import path from "path";
 
 import {
+  collectReferencedLoadEnvNames,
   cleanupLoadEnvIfUnused,
   cleanupUnusedWrapper,
   collectReferencedWrapperPaths,
   ensureServerWrapper,
+  syncLoadEnvWithReferencedWrappers,
 } from "../dist/utils/project-runtime.js";
-import { writeLoadEnvConfig } from "../dist/utils/load-env-config.js";
 
 async function canonicalizePath(targetPath) {
   try {
@@ -25,27 +26,16 @@ async function canonicalizePath(targetPath) {
 
 describe("project runtime utilities", () => {
   let originalCwd;
-  let originalHome;
   let tempDir;
-  let homeDir;
 
   beforeEach(async () => {
     originalCwd = process.cwd();
-    originalHome = process.env.HOME;
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "mcpkit-runtime-test-"));
-    homeDir = path.join(tempDir, "home");
-    await fs.mkdir(homeDir, { recursive: true });
-    process.env.HOME = homeDir;
     process.chdir(tempDir);
   });
 
   afterEach(async () => {
     process.chdir(originalCwd);
-    if (originalHome === undefined) {
-      delete process.env.HOME;
-    } else {
-      process.env.HOME = originalHome;
-    }
     await fs.rm(tempDir, { recursive: true, force: true });
   });
 
@@ -87,8 +77,8 @@ describe("project runtime utilities", () => {
     expect(wrapperContent).toContain('"authorization:Bearer ${N8N_MCP_KEY}"');
   });
 
-  test("rewrites load-env content when global config changes", async () => {
-    await ensureServerWrapper({
+  test("derives referenced load-env names from wrapper metadata", async () => {
+    const first = await ensureServerWrapper({
       scriptName: "tavily-mcp",
       requiredEnv: ["TAVILY_API_KEY"],
       exec: {
@@ -96,27 +86,81 @@ describe("project runtime utilities", () => {
         args: ["-y", "tavily-mcp@latest"],
       },
     });
+    const second = await ensureServerWrapper({
+      scriptName: "n8n-mcp",
+      requiredEnv: ["N8N_MCP_KEY"],
+      exec: {
+        command: "npx",
+        args: ["-y", "supergateway"],
+      },
+    });
 
+    await fs.writeFile(
+      path.join(tempDir, ".mcp.json"),
+      JSON.stringify({
+        mcpServers: {
+          tavily: { command: first.wrapperPath },
+          n8n: { command: second.wrapperPath },
+        },
+      }),
+      "utf-8",
+    );
+
+    expect(await collectReferencedLoadEnvNames()).toEqual([
+      "N8N_MCP_KEY",
+      "TAVILY_API_KEY",
+    ]);
+  });
+
+  test("syncs load-env from currently referenced wrappers", async () => {
+    const first = await ensureServerWrapper({
+      scriptName: "tavily-mcp",
+      requiredEnv: ["TAVILY_API_KEY"],
+      exec: {
+        command: "npx",
+        args: ["-y", "tavily-mcp@latest"],
+      },
+    });
+    const second = await ensureServerWrapper({
+      scriptName: "n8n-mcp",
+      requiredEnv: ["N8N_MCP_KEY"],
+      exec: {
+        command: "npx",
+        args: ["-y", "supergateway"],
+      },
+    });
+
+    await fs.writeFile(
+      path.join(tempDir, ".mcp.json"),
+      JSON.stringify({
+        mcpServers: {
+          tavily: { command: first.wrapperPath },
+        },
+      }),
+      "utf-8",
+    );
+
+    await syncLoadEnvWithReferencedWrappers();
     const loadEnvPath = path.join(tempDir, ".mcpkit/bin/load-env");
     const initialContent = await fs.readFile(loadEnvPath, "utf-8");
 
-    await writeLoadEnvConfig({
-      extraEnvVars: ["ZED_API_KEY"],
-    });
+    await fs.writeFile(
+      path.join(tempDir, ".mcp.json"),
+      JSON.stringify({
+        mcpServers: {
+          tavily: { command: first.wrapperPath },
+          n8n: { command: second.wrapperPath },
+        },
+      }),
+      "utf-8",
+    );
 
-    await ensureServerWrapper({
-      scriptName: "tavily-mcp",
-      requiredEnv: ["TAVILY_API_KEY"],
-      exec: {
-        command: "npx",
-        args: ["-y", "tavily-mcp@latest"],
-      },
-    });
-
+    await syncLoadEnvWithReferencedWrappers();
     const updatedContent = await fs.readFile(loadEnvPath, "utf-8");
 
-    expect(initialContent).not.toContain("ZED_API_KEY");
-    expect(updatedContent).toContain("ZED_API_KEY");
+    expect(initialContent).toContain("TAVILY_API_KEY");
+    expect(initialContent).not.toContain("N8N_MCP_KEY");
+    expect(updatedContent).toContain("N8N_MCP_KEY");
   });
 
   test("collects referenced wrapper paths from project configs", async () => {

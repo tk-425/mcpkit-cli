@@ -69,7 +69,7 @@ function buildGenericWrapperConfig(
     requiredEnv: findInterpolatedEnvNames({
       args: normalized.args,
       env: envMap,
-    }),
+    }).sort(),
     staticEnv: Object.keys(staticEnv).length > 0 ? staticEnv : undefined,
     forwardedEnv: Object.keys(forwardedEnv).length > 0 ? forwardedEnv : undefined,
     templatedEnv: Object.keys(templatedEnv).length > 0 ? templatedEnv : undefined,

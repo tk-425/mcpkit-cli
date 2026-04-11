@@ -1,14 +1,5 @@
 import type { WrapperConfig } from './wrapper-types.js';
-
-export const BUILT_IN_LOAD_ENV_KEYS = [
-  'AIKIDO_API_KEY',
-  'CONTEXT_7_KEY',
-  'FIRECRAWL_KEY',
-  'GLM_MCP_API_KEY',
-  'N8N_MCP_KEY',
-  'STITCH_API_KEY',
-  'TAVILY_API_KEY',
-] as const;
+export const WRAPPER_LOAD_ENV_METADATA_PREFIX = '# mcpkit-load-env:';
 
 export function shellQuote(value: string): string {
   return `'${value.replace(/'/g, `'\\''`)}'`;
@@ -19,7 +10,7 @@ function shellTemplateQuote(value: string): string {
 }
 
 export function buildLoadEnvScript(envVarNames: readonly string[]): string {
-  const standardKeyBlock = [...new Set(envVarNames)]
+  const standardKeyBlock = [...new Set(envVarNames)].sort()
     .map(
       (key) => `if [[ -z "\${${key}:-}" ]]; then
   secret_value="$(security find-generic-password -a "$USER" -s ${shellQuote(key)} -w 2>/dev/null || true)"
@@ -35,13 +26,6 @@ set -euo pipefail
 
 if command -v security >/dev/null 2>&1; then
 ${standardKeyBlock}
-
-  if [[ -z "\${NVIDIA_NIM_API_KEY:-}" ]]; then
-    secret_value="$(security find-generic-password -a "nvidia-nim" -s "nvidia-nim-api-key" -w 2>/dev/null || true)"
-    if [[ -n "$secret_value" ]]; then
-      export NVIDIA_NIM_API_KEY="$secret_value"
-    fi
-  fi
 fi
 
 exec "$@"
@@ -49,6 +33,7 @@ exec "$@"
 }
 
 export function buildWrapperScript(wrapperConfig: WrapperConfig): string {
+  const loadEnvNames = [...new Set(wrapperConfig.requiredEnv ?? [])].sort();
   const commandParts = [
     shellQuote(wrapperConfig.exec.command),
     ...((wrapperConfig.exec.argTemplates ?? []).length > 0
@@ -103,6 +88,7 @@ fi`,
 set -euo pipefail
 
 script_dir="$(CDPATH= cd -- "$(dirname "$0")" && pwd)"
+${WRAPPER_LOAD_ENV_METADATA_PREFIX}${loadEnvNames.length > 0 ? ` ${loadEnvNames.join(' ')}` : ''}
 
 exec "$script_dir/load-env" zsh -c ${shellQuote(innerScript)}
 `;
