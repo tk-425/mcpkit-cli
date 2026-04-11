@@ -11,7 +11,10 @@ import {
   emitClaudeProjectServer,
   emitCodexProjectServer,
 } from "../utils/project-emitter.js";
-import { collectReferencedWrapperPaths } from "../utils/project-runtime.js";
+import {
+  collectReferencedWrapperPaths,
+  syncLoadEnvWithReferencedWrappers,
+} from "../utils/project-runtime.js";
 import {
   projectConfigExists,
   readProjectConfig,
@@ -228,6 +231,7 @@ export async function refreshCommand(options: TargetOptions): Promise<void> {
       }
     }
 
+    await syncLoadEnvWithReferencedWrappers();
     await ensureGitignoreForFinalWrapperState();
     return;
   }
@@ -259,5 +263,6 @@ export async function refreshCommand(options: TargetOptions): Promise<void> {
     return;
   }
 
+  await syncLoadEnvWithReferencedWrappers();
   await ensureGitignoreForFinalWrapperState();
 }

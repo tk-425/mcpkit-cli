@@ -21,6 +21,7 @@ import {
 import { resolveProjectTargets } from "./project-targets.js";
 import { emitClaudeProjectServer, emitCodexProjectServer } from "../utils/project-emitter.js";
 import { ensureMcpkitGitignoreBlock } from "../utils/gitignore.js";
+import { syncLoadEnvWithReferencedWrappers } from "../utils/project-runtime.js";
 
 async function promptServerSelection(
   serverNames: string[],
@@ -129,6 +130,7 @@ async function runClaudeInitFlow(): Promise<void> {
   }
 
   await writeProjectConfig(projectConfig);
+  await syncLoadEnvWithReferencedWrappers();
 
   console.log(
     chalk.green(
@@ -237,6 +239,7 @@ async function runCodexInitFlow(): Promise<void> {
   }
 
   await writeCodexProjectConfig(projectConfig);
+  await syncLoadEnvWithReferencedWrappers();
 
   console.log(
     chalk.green(

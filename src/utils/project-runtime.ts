@@ -14,9 +14,8 @@ import {
   projectConfigExists,
   readProjectConfig,
 } from './project-config.js';
-import { listConfiguredLoadEnvVars } from './load-env-config.js';
 import {
-  BUILT_IN_LOAD_ENV_KEYS,
+  WRAPPER_LOAD_ENV_METADATA_PREFIX,
   buildLoadEnvScript,
   buildWrapperScript,
 } from './wrapper-templates.js';
@@ -27,6 +26,30 @@ export interface RuntimeWriteResult {
   wroteLoadEnv: boolean;
   wroteWrapper: boolean;
   wrapperPath?: string;
+}
+
+function normalizeEnvNames(names: readonly string[]): string[] {
+  return [...new Set(names.filter((name) => name.length > 0))].sort();
+}
+
+function parseLoadEnvNamesFromWrapperContent(content: string): string[] {
+  const metadataLine = content
+    .split('\n')
+    .find((line) => line.startsWith(WRAPPER_LOAD_ENV_METADATA_PREFIX));
+
+  if (!metadataLine) {
+    return [];
+  }
+
+  const serializedNames = metadataLine
+    .slice(WRAPPER_LOAD_ENV_METADATA_PREFIX.length)
+    .trim();
+
+  if (!serializedNames) {
+    return [];
+  }
+
+  return normalizeEnvNames(serializedNames.split(/\s+/));
 }
 
 async function canonicalizePath(path: string): Promise<string> {
@@ -71,12 +94,15 @@ export async function writeExecutableFile(path: string, content: string): Promis
   return changed;
 }
 
-export async function ensureLoadEnvScript(): Promise<{ wroteRuntime: boolean; wroteLoadEnv: boolean; path: string }> {
+export async function ensureLoadEnvScript(
+  envVarNames: readonly string[],
+): Promise<{ wroteRuntime: boolean; wroteLoadEnv: boolean; path: string }> {
   const wroteRuntime = await ensureProjectRuntimeDirs();
   const path = getProjectWrapperPath('load-env');
-  const configuredNames = await listConfiguredLoadEnvVars();
-  const loadEnvNames = [...new Set([...BUILT_IN_LOAD_ENV_KEYS, ...configuredNames])].sort();
-  const wroteLoadEnv = await writeExecutableFile(path, buildLoadEnvScript(loadEnvNames));
+  const wroteLoadEnv = await writeExecutableFile(
+    path,
+    buildLoadEnvScript(normalizeEnvNames(envVarNames)),
+  );
 
   return { wroteRuntime, wroteLoadEnv, path };
 }
@@ -86,7 +112,7 @@ export async function ensureServerWrapper(wrapperConfig: WrapperConfig): Promise
   let wroteLoadEnv = false;
 
   if (wrapperConfig.useLoadEnv !== false) {
-    const loadEnvResult = await ensureLoadEnvScript();
+    const loadEnvResult = await ensureLoadEnvScript(wrapperConfig.requiredEnv ?? []);
     wroteLoadEnv = loadEnvResult.wroteLoadEnv || loadEnvResult.wroteRuntime;
   }
 
@@ -130,6 +156,36 @@ export async function collectReferencedWrapperPaths(): Promise<Set<string>> {
   }
 
   return referencedPaths;
+}
+
+export async function collectReferencedLoadEnvNames(): Promise<string[]> {
+  const referencedPaths = await collectReferencedWrapperPaths();
+  const loadEnvNames = new Set<string>();
+
+  for (const wrapperPath of referencedPaths) {
+    if (basename(wrapperPath) === 'load-env' || !existsSync(wrapperPath)) {
+      continue;
+    }
+
+    const content = await readFile(wrapperPath, 'utf-8');
+    for (const envName of parseLoadEnvNamesFromWrapperContent(content)) {
+      loadEnvNames.add(envName);
+    }
+  }
+
+  return [...loadEnvNames].sort();
+}
+
+export async function syncLoadEnvWithReferencedWrappers(): Promise<boolean> {
+  const referencedPaths = await collectReferencedWrapperPaths();
+
+  if (referencedPaths.size === 0) {
+    return cleanupLoadEnvIfUnused();
+  }
+
+  const loadEnvNames = await collectReferencedLoadEnvNames();
+  const result = await ensureLoadEnvScript(loadEnvNames);
+  return result.wroteRuntime || result.wroteLoadEnv;
 }
 
 export async function cleanupUnusedWrapper(wrapperPath: string): Promise<boolean> {

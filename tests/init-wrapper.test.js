@@ -4,7 +4,6 @@ import path from "path";
 
 import { writeProjectConfig } from "../dist/utils/project-config.js";
 import { writeCodexProjectConfig } from "../dist/utils/codex-config.js";
-import { writeLoadEnvConfig } from "../dist/utils/load-env-config.js";
 import {
   emitClaudeProjectServer,
   emitCodexProjectServer,
@@ -27,27 +26,16 @@ async function canonicalizePath(targetPath) {
 
 describe("wrapper integration flow", () => {
   let originalCwd;
-  let originalHome;
   let tempDir;
-  let homeDir;
 
   beforeEach(async () => {
     originalCwd = process.cwd();
-    originalHome = process.env.HOME;
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "mcpkit-init-wrapper-test-"));
-    homeDir = path.join(tempDir, "home");
-    await fs.mkdir(homeDir, { recursive: true });
-    process.env.HOME = homeDir;
     process.chdir(tempDir);
   });
 
   afterEach(async () => {
     process.chdir(originalCwd);
-    if (originalHome === undefined) {
-      delete process.env.HOME;
-    } else {
-      process.env.HOME = originalHome;
-    }
     await fs.rm(tempDir, { recursive: true, force: true });
   });
 
@@ -92,11 +80,7 @@ describe("wrapper integration flow", () => {
     );
   });
 
-  test("writes load-env with configured env vars for newly emitted wrappers", async () => {
-    await writeLoadEnvConfig({
-      extraEnvVars: ["ZED_API_KEY"],
-    });
-
+  test("writes load-env with env vars derived from newly emitted wrappers", async () => {
     await emitClaudeProjectServer("tavily-mcp", {
       command: "npx",
       args: ["-y", "tavily-mcp@latest"],
@@ -106,7 +90,8 @@ describe("wrapper integration flow", () => {
     });
 
     const loadEnvContent = await fs.readFile(path.join(tempDir, ".mcpkit/bin/load-env"), "utf-8");
-    expect(loadEnvContent).toContain("ZED_API_KEY");
+    expect(loadEnvContent).toContain("TAVILY_API_KEY");
+    expect(loadEnvContent).not.toContain("ZED_API_KEY");
   });
 
   test("writes native Codex config with wrapper command and preserves native fields", async () => {

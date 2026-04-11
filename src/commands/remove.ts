@@ -16,9 +16,9 @@ import {
 } from "../utils/targets.js";
 import { resolveProjectTargets } from "./project-targets.js";
 import {
-  cleanupLoadEnvIfUnused,
   cleanupUnusedWrapper,
   collectReferencedWrapperPaths,
+  syncLoadEnvWithReferencedWrappers,
 } from "../utils/project-runtime.js";
 import { getProjectRuntimeBinDirPath } from "../utils/paths.js";
 import { resolve } from "path";
@@ -105,12 +105,13 @@ async function runClaudeRemoveFlow(): Promise<void> {
       const referencedPaths = await collectReferencedWrapperPaths();
       if (!referencedPaths.has(wrapperPath)) {
         await cleanupUnusedWrapper(wrapperPath);
-        await cleanupLoadEnvIfUnused();
       }
     }
 
     console.log(chalk.green(`✓ Removed "${serverName}" from .mcp.json`));
   }
+
+  await syncLoadEnvWithReferencedWrappers();
 }
 
 async function runCodexRemoveFlow(): Promise<void> {
@@ -160,7 +161,6 @@ async function runCodexRemoveFlow(): Promise<void> {
       const referencedPaths = await collectReferencedWrapperPaths();
       if (!referencedPaths.has(wrapperPath)) {
         await cleanupUnusedWrapper(wrapperPath);
-        await cleanupLoadEnvIfUnused();
       }
     }
 
@@ -168,6 +168,8 @@ async function runCodexRemoveFlow(): Promise<void> {
       chalk.green(`✓ Removed "${serverName}" from .codex/config.toml`),
     );
   }
+
+  await syncLoadEnvWithReferencedWrappers();
 }
 
 /**

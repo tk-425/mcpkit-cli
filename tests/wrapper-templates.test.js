@@ -1,5 +1,5 @@
 import {
-  BUILT_IN_LOAD_ENV_KEYS,
+  WRAPPER_LOAD_ENV_METADATA_PREFIX,
   buildLoadEnvScript,
   buildWrapperScript,
   shellQuote,
@@ -10,8 +10,12 @@ describe("wrapper template builders", () => {
     expect(shellQuote("it's fine")).toBe("'it'\\''s fine'");
   });
 
-  test("buildLoadEnvScript includes standard env loading and exec", () => {
-    const script = buildLoadEnvScript(BUILT_IN_LOAD_ENV_KEYS);
+  test("buildLoadEnvScript includes supplied env loading and exec", () => {
+    const script = buildLoadEnvScript([
+      "CONTEXT_7_KEY",
+      "STITCH_API_KEY",
+      "TAVILY_API_KEY",
+    ]);
 
     expect(script).toContain("CONTEXT_7_KEY");
     expect(script).toContain("STITCH_API_KEY");
@@ -21,14 +25,14 @@ describe("wrapper template builders", () => {
 
   test("buildLoadEnvScript emits configured env vars once alongside built-ins", () => {
     const script = buildLoadEnvScript([
-      ...BUILT_IN_LOAD_ENV_KEYS,
       "ZED_API_KEY",
+      "TAVILY_API_KEY",
       "TAVILY_API_KEY",
     ]);
 
     expect(script).toContain("ZED_API_KEY");
     expect(script.match(/find-generic-password -a "\$USER" -s 'TAVILY_API_KEY'/g)).toHaveLength(1);
-    expect(script).toContain('nvidia-nim-api-key');
+    expect(script).not.toContain("NVIDIA_NIM_API_KEY");
   });
 
   test("buildWrapperScript includes required env checks and static env exports", () => {
@@ -45,6 +49,7 @@ describe("wrapper template builders", () => {
     });
 
     expect(script).toContain('exec "$script_dir/load-env"');
+    expect(script).toContain(`${WRAPPER_LOAD_ENV_METADATA_PREFIX} TAVILY_API_KEY`);
     expect(script).toContain("TAVILY_API_KEY is not set");
     expect(script).toContain("DEFAULT_PARAMETERS");
     expect(script).toContain("tavily-mcp@latest");
@@ -73,6 +78,7 @@ describe("wrapper template builders", () => {
 
     expect(script).toContain('export API_KEY="$N8N_MCP_KEY"');
     expect(script).toContain('export HEADER_VALUE="Bearer ${N8N_MCP_KEY}"');
+    expect(script).toContain(`${WRAPPER_LOAD_ENV_METADATA_PREFIX} N8N_MCP_KEY`);
     expect(script).toContain('"authorization:Bearer ${N8N_MCP_KEY}"');
   });
 

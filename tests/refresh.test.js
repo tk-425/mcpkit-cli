@@ -8,7 +8,6 @@ import {
   writeCodexProjectConfig,
   writeCodexRegistry,
 } from "../dist/utils/codex-config.js";
-import { writeLoadEnvConfig } from "../dist/utils/load-env-config.js";
 import { writeProjectConfig } from "../dist/utils/project-config.js";
 import { writeRegistry } from "../dist/utils/registry.js";
 
@@ -261,7 +260,7 @@ describe("refresh command", () => {
     expect(codexContent).toContain(path.join(projectDir, ".mcpkit/bin/zai-mcp-server"));
   });
 
-  test("refresh regenerates load-env with configured global env vars", async () => {
+  test("refresh derives load-env from wrapped servers in the project", async () => {
     await writeRegistry({
       servers: {
         "tavily-mcp": {
@@ -270,6 +269,19 @@ describe("refresh command", () => {
           env: {
             TAVILY_API_KEY: "${TAVILY_API_KEY}",
           },
+        },
+      },
+    });
+    await writeCodexRegistry({
+      mcp_servers: {
+        "n8n-mcp": {
+          command: "npx",
+          args: [
+            "-y",
+            "supergateway",
+            "--header",
+            "authorization:Bearer ${N8N_MCP_KEY}",
+          ],
         },
       },
     });
@@ -285,19 +297,28 @@ describe("refresh command", () => {
         },
       },
     });
-
-    await refreshCommand({});
-    const loadEnvPath = path.join(projectDir, ".mcpkit/bin/load-env");
-    const initialContent = await fs.readFile(loadEnvPath, "utf-8");
-
-    await writeLoadEnvConfig({
-      extraEnvVars: ["ZED_API_KEY"],
+    await writeCodexProjectConfig({
+      mcp_servers: {
+        "n8n-mcp": {
+          command: "npx",
+          args: [
+            "-y",
+            "supergateway",
+            "--header",
+            "authorization:Bearer ${N8N_MCP_KEY}",
+          ],
+        },
+      },
     });
 
     await refreshCommand({});
-    const refreshedContent = await fs.readFile(loadEnvPath, "utf-8");
+    const loadEnvContent = await fs.readFile(
+      path.join(projectDir, ".mcpkit/bin/load-env"),
+      "utf-8",
+    );
 
-    expect(initialContent).not.toContain("ZED_API_KEY");
-    expect(refreshedContent).toContain("ZED_API_KEY");
+    expect(loadEnvContent).toContain("TAVILY_API_KEY");
+    expect(loadEnvContent).toContain("N8N_MCP_KEY");
+    expect(loadEnvContent).not.toContain("ZED_API_KEY");
   });
 });
