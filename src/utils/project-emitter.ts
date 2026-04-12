@@ -33,7 +33,14 @@ export async function emitClaudeProjectServer(
   }
 
   const runtime = await ensureServerWrapper(resolution.wrapper!);
-  const { args: _args, env: _env, ...rest } = config;
+  const {
+    args: _args,
+    env: _env,
+    url: _url,
+    headers: _headers,
+    type: _type,
+    ...rest
+  } = config;
 
   return {
     config: {
@@ -69,6 +76,8 @@ export async function emitCodexProjectServer(
     args: _args,
     env: _env,
     env_vars: _envVars,
+    url: _url,
+    http_headers: _httpHeaders,
     ...rest
   } = config;
 

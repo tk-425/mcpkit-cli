@@ -97,6 +97,13 @@ export function validateServerConfig(config: any): { valid: boolean; error?: str
     }
   }
 
+  if ((serverConfig as { headers?: unknown }).headers !== undefined) {
+    const result = validateStringRecord((serverConfig as { headers?: unknown }).headers, 'headers');
+    if (!result.valid) {
+      return result;
+    }
+  }
+
   // Validate 'type' field if present
   if (serverConfig.type !== undefined) {
     if (typeof serverConfig.type !== 'string') {

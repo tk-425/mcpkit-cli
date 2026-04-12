@@ -1,6 +1,6 @@
 {
   "name": "mcpkit",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "MCP Server Configuration Manager - CLI tool to manage .mcp.json files",
   "main": "dist/index.js",
   "bin": {
