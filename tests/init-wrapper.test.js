@@ -94,6 +94,19 @@ describe("wrapper integration flow", () => {
     expect(loadEnvContent).not.toContain("ZED_API_KEY");
   });
 
+  test("writes load-env with env vars derived from supported remote/http wrappers", async () => {
+    await emitClaudeProjectServer("web-reader", {
+      type: "remote",
+      url: "https://example.com/mcp",
+      headers: {
+        Authorization: "Bearer ${GLM_MCP_API_KEY}",
+      },
+    });
+
+    const loadEnvContent = await fs.readFile(path.join(tempDir, ".mcpkit/bin/load-env"), "utf-8");
+    expect(loadEnvContent).toContain("GLM_MCP_API_KEY");
+  });
+
   test("writes native Codex config with wrapper command and preserves native fields", async () => {
     const emitted = await emitCodexProjectServer("n8n-mcp", {
       command: "npx",
@@ -115,6 +128,26 @@ describe("wrapper integration flow", () => {
     expect(content).toContain(path.join(tempDir, ".mcpkit/bin/n8n-mcp"));
     expect(content).toContain("required = true");
     expect(content).toContain("startup_timeout_sec = 45");
+  });
+
+  test("writes native Claude config with wrapper command for supported remote/http servers", async () => {
+    const emitted = await emitClaudeProjectServer("web-reader", {
+      type: "remote",
+      url: "https://example.com/mcp",
+      headers: {
+        Authorization: "Bearer ${GLM_MCP_API_KEY}",
+      },
+    });
+
+    await writeProjectConfig({ mcpServers: { "web-reader": emitted.config } });
+
+    const projectConfig = JSON.parse(await fs.readFile(path.join(tempDir, ".mcp.json"), "utf-8"));
+    expect(projectConfig.mcpServers["web-reader"].command).toBe(
+      await canonicalizePath(path.join(tempDir, ".mcpkit/bin/web-reader")),
+    );
+    expect(projectConfig.mcpServers["web-reader"].url).toBeUndefined();
+    expect(projectConfig.mcpServers["web-reader"].headers).toBeUndefined();
+    expect(projectConfig.mcpServers["web-reader"].type).toBeUndefined();
   });
 
   test("cleans up unreferenced wrapper files safely", async () => {

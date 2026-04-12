@@ -1,6 +1,7 @@
 import {
   parseCodexServerInput,
   parseServerInput,
+  validateServerConfig,
   validateCodexServerConfig,
 } from "../dist/utils/validation.js";
 
@@ -47,4 +48,18 @@ describe("validation utilities", () => {
     });
   });
 
+  test("rejects Claude headers when values are not strings", () => {
+    expect(
+      validateServerConfig({
+        type: "remote",
+        url: "https://example.com/mcp",
+        headers: {
+          Authorization: 123,
+        },
+      }),
+    ).toEqual({
+      valid: false,
+      error: 'All values in "headers" must be strings',
+    });
+  });
 });

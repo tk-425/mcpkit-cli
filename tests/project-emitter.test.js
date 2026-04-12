@@ -95,7 +95,7 @@ describe("project emitter", () => {
     expect(result.config.env).toBeUndefined();
   });
 
-  test("skips unsupported remote/http interpolation instead of emitting it raw", async () => {
+  test("rewrites supported Claude remote/http header interpolation to a local supergateway wrapper", async () => {
     const result = await emitClaudeProjectServer("web-reader", {
       type: "remote",
       url: "https://example.com/mcp",
@@ -104,9 +104,58 @@ describe("project emitter", () => {
       },
     });
 
+    expect(result.usedWrapper).toBe(true);
+    expect(result.skipped).toBe(false);
+    expect(result.config.command).toBe(
+      await canonicalizePath(path.join(tempDir, ".mcpkit/bin/web-reader")),
+    );
+    expect(result.config.url).toBeUndefined();
+    expect(result.config.headers).toBeUndefined();
+    expect(result.config.type).toBeUndefined();
+
+    const wrapperContent = await fs.readFile(
+      path.join(tempDir, ".mcpkit/bin/web-reader"),
+      "utf-8",
+    );
+    expect(wrapperContent).toContain('"supergateway"');
+    expect(wrapperContent).toContain('"--streamableHttp"');
+    expect(wrapperContent).toContain('"https://example.com/mcp"');
+    expect(wrapperContent).toContain('"Authorization: Bearer ${GLM_MCP_API_KEY}"');
+  });
+
+  test("rewrites supported Codex remote/http header interpolation to a local supergateway wrapper", async () => {
+    const result = await emitCodexProjectServer("remote-api", {
+      url: "https://example.com/mcp",
+      http_headers: {
+        Authorization: "Bearer ${API_KEY}",
+      },
+      required: true,
+      startup_timeout_sec: 30,
+    });
+
+    expect(result.usedWrapper).toBe(true);
+    expect(result.skipped).toBe(false);
+    expect(result.config.command).toBe(
+      await canonicalizePath(path.join(tempDir, ".mcpkit/bin/remote-api")),
+    );
+    expect(result.config.url).toBeUndefined();
+    expect(result.config.http_headers).toBeUndefined();
+    expect(result.config.required).toBe(true);
+    expect(result.config.startup_timeout_sec).toBe(30);
+  });
+
+  test("skips unsupported Codex remote/http env injection shapes", async () => {
+    const result = await emitCodexProjectServer("remote-api", {
+      url: "https://example.com/mcp",
+      env_http_headers: {
+        Authorization: "API_KEY",
+      },
+      required: true,
+    });
+
     expect(result.usedWrapper).toBe(false);
     expect(result.skipped).toBe(true);
     expect(result.config).toBeUndefined();
-    expect(result.reason).toContain('Skipped "web-reader"');
+    expect(result.reason).toContain("not supported for wrapper conversion");
   });
 });

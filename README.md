@@ -20,12 +20,14 @@ Current behavior:
 
 - if a selected server does not use `${VAR}`, `mcpkit` emits it directly
 - if a selected server uses `${VAR}` in an easy stdio launcher shape, `mcpkit` wraps it automatically under `.mcpkit/bin/`
-- if a selected server uses `${VAR}` in a remote/http shape that cannot be converted safely yet, `mcpkit` warns and skips it instead of emitting raw interpolation into project config
+- if a selected server uses `${VAR}` in a supported remote/http auth shape, `mcpkit` converts it into a local `supergateway` launcher and wraps that launcher under `.mcpkit/bin/`
+- if a selected server uses `${VAR}` in a remote/http shape outside that first-pass support boundary, `mcpkit` warns and skips it instead of emitting raw interpolation into project config
 
 Rule of thumb:
 
 - `${VAR}` found in a selected stdio launcher config -> wrap it
-- `${VAR}` found in a selected remote/http config -> skip it until `mcpkit` has a safe conversion rule for that server
+- `${VAR}` found in a supported remote/http auth config -> convert it to a local `supergateway` launcher, then wrap it
+- `${VAR}` found in an unsupported remote/http config -> skip it until `mcpkit` has a safe conversion rule for that shape
 - no `${VAR}` -> emit the native config directly
 
 When wrapper-backed emission is used:

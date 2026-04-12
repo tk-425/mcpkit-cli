@@ -8,6 +8,7 @@ export interface ServerConfig {
   args?: string[];
   type?: string;
   env?: Record<string, string>;
+  headers?: Record<string, string>;
   [key: string]: any;
 }
 

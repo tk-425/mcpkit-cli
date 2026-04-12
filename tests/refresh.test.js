@@ -77,7 +77,7 @@ describe("refresh command", () => {
     expect(output).toContain('Run "mcpkit init" first.');
   });
 
-  test("updates Claude entries in place, wraps easy stdio servers, and preserves missing or skipped entries", async () => {
+  test("updates Claude entries in place, wraps supported remote/http servers, and preserves missing entries", async () => {
     await writeRegistry({
       servers: {
         "tavily-mcp": {
@@ -101,7 +101,7 @@ describe("refresh command", () => {
       command: "npx",
       args: ["-y", "missing-server@latest"],
     };
-    const skippedServerConfig = {
+    const remoteServerConfig = {
       type: "remote",
       url: "https://example.com/mcp",
       headers: {
@@ -119,7 +119,7 @@ describe("refresh command", () => {
           },
         },
         "missing-server": missingServerConfig,
-        "web-reader": skippedServerConfig,
+        "web-reader": remoteServerConfig,
       },
     });
 
@@ -136,11 +136,16 @@ describe("refresh command", () => {
       await canonicalizePath(path.join(projectDir, ".mcpkit/bin/tavily-mcp")),
     );
     expect(projectConfig.mcpServers["missing-server"]).toEqual(missingServerConfig);
-    expect(projectConfig.mcpServers["web-reader"]).toEqual(skippedServerConfig);
+    expect(projectConfig.mcpServers["web-reader"].command).toBe(
+      await canonicalizePath(path.join(projectDir, ".mcpkit/bin/web-reader")),
+    );
+    expect(projectConfig.mcpServers["web-reader"].url).toBeUndefined();
+    expect(projectConfig.mcpServers["web-reader"].headers).toBeUndefined();
+    expect(projectConfig.mcpServers["web-reader"].type).toBeUndefined();
     expect(gitignore).toContain(".mcpkit/");
     expect(output).toContain('Refreshed "tavily-mcp" with a project-local wrapper.');
+    expect(output).toContain('Refreshed "web-reader" with a project-local wrapper.');
     expect(output).toContain('Preserved "missing-server": not found in the registry.');
-    expect(output).toContain('Preserved "web-reader": Skipped "web-reader"');
   });
 
   test("updates Codex entries in place and preserves native non-launch fields", async () => {
@@ -320,5 +325,95 @@ describe("refresh command", () => {
     expect(loadEnvContent).toContain("TAVILY_API_KEY");
     expect(loadEnvContent).toContain("N8N_MCP_KEY");
     expect(loadEnvContent).not.toContain("ZED_API_KEY");
+  });
+
+  test("refresh converts supported Codex remote/http headers into local wrappers", async () => {
+    await writeCodexRegistry({
+      mcp_servers: {
+        "remote-api": {
+          url: "https://example.com/mcp",
+          http_headers: {
+            Authorization: "Bearer ${API_KEY}",
+          },
+          required: true,
+          startup_timeout_sec: 30,
+        },
+      },
+    });
+
+    await writeCodexProjectConfig({
+      mcp_servers: {
+        "remote-api": {
+          url: "https://example.com/mcp",
+          http_headers: {
+            Authorization: "Bearer ${API_KEY}",
+          },
+          required: true,
+          startup_timeout_sec: 30,
+        },
+      },
+    });
+
+    const output = await captureLogs(async () => {
+      await refreshCommand({ codex: true });
+    });
+
+    const content = await fs.readFile(
+      path.join(projectDir, ".codex/config.toml"),
+      "utf-8",
+    );
+    const loadEnvContent = await fs.readFile(
+      path.join(projectDir, ".mcpkit/bin/load-env"),
+      "utf-8",
+    );
+
+    expect(content).toContain(path.join(projectDir, ".mcpkit/bin/remote-api"));
+    expect(content).toContain("required = true");
+    expect(content).toContain("startup_timeout_sec = 30");
+    expect(content).not.toContain("https://example.com/mcp");
+    expect(content).not.toContain("http_headers");
+    expect(loadEnvContent).toContain("API_KEY");
+    expect(output).toContain('Refreshed "remote-api" with a project-local wrapper.');
+  });
+
+  test("preserves unsupported Codex remote/http env injection entries", async () => {
+    await writeCodexRegistry({
+      mcp_servers: {
+        "remote-api": {
+          url: "https://example.com/mcp",
+          env_http_headers: {
+            Authorization: "API_KEY",
+          },
+          required: true,
+        },
+      },
+    });
+
+    const skippedServerConfig = {
+      url: "https://example.com/mcp",
+      env_http_headers: {
+        Authorization: "API_KEY",
+      },
+      required: true,
+    };
+
+    await writeCodexProjectConfig({
+      mcp_servers: {
+        "remote-api": skippedServerConfig,
+      },
+    });
+
+    const output = await captureLogs(async () => {
+      await refreshCommand({ codex: true });
+    });
+
+    const content = await fs.readFile(
+      path.join(projectDir, ".codex/config.toml"),
+      "utf-8",
+    );
+
+    expect(content).toContain('url = "https://example.com/mcp"');
+    expect(content).toContain('Authorization = "API_KEY"');
+    expect(output).toContain("not supported for wrapper conversion");
   });
 });
