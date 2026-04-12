@@ -1,27 +1,18 @@
 import chalk from "chalk";
 import {
-  codexProjectConfigExists,
-  ensureCodexMcpServers,
-  readCodexProjectConfig,
-  readCodexRegistry,
-  writeCodexProjectConfig,
-} from "../utils/codex-config.js";
-import { ensureMcpkitGitignoreBlock } from "../utils/gitignore.js";
+  getCommonProjectTargetCopy,
+  getUpdateProjectTargetCopy,
+} from "../utils/project-target-copy/index.js";
 import {
-  emitClaudeProjectServer,
-  emitCodexProjectServer,
-} from "../utils/project-emitter.js";
+  getProjectTargetAdapter,
+  PROJECT_TARGET_ADAPTERS,
+  type ProjectTargetAdapter,
+} from "../utils/project-target-adapter.js";
 import {
-  collectReferencedWrapperPaths,
-  syncLoadEnvWithReferencedWrappers,
+  reconcileProjectRuntimeArtifacts,
 } from "../utils/project-runtime.js";
-import {
-  projectConfigExists,
-  readProjectConfig,
-  writeProjectConfig,
-} from "../utils/project-config.js";
-import { readRegistry } from "../utils/registry.js";
-import type { TargetOptions } from "../utils/targets.js";
+import type { TargetOptions, McpTarget } from "../utils/targets.js";
+import { getExplicitTargets } from "../utils/targets.js";
 
 type UpdateOutcome =
   | { kind: "refreshed_direct"; serverName: string }
@@ -38,46 +29,16 @@ function printNoProjectConfigMessage(): void {
 }
 
 function printMissingTargetConfigMessage(target: "claude" | "codex"): void {
-  if (target === "claude") {
-    console.log(chalk.yellow('No .mcp.json found in the current directory.'));
-    console.log(
-      chalk.gray('Use "mcpkit init --claude" or "mcpkit init" to create it first.'),
-    );
-    return;
-  }
+  const adapter = getProjectTargetAdapter(target);
+  const copy = getCommonProjectTargetCopy(target);
+  console.log(chalk.yellow(`No ${adapter.configPath} found in the current directory.`));
+  console.log(chalk.gray(`${copy.missingConfigHint}.`));
+}
 
-  console.log(chalk.yellow("No .codex/config.toml found in the current directory."));
-  console.log(
-    chalk.gray('Use "mcpkit init --codex" or "mcpkit init" to create it first.'),
+function getDetectedTargets(): McpTarget[] {
+  return PROJECT_TARGET_ADAPTERS.filter((adapter) => adapter.configExists()).map(
+    (adapter) => adapter.key,
   );
-}
-
-function getRequestedTargets(options: TargetOptions): Array<"claude" | "codex"> {
-  const targets: Array<"claude" | "codex"> = [];
-
-  if (options.claude) {
-    targets.push("claude");
-  }
-
-  if (options.codex) {
-    targets.push("codex");
-  }
-
-  return targets;
-}
-
-function getDetectedTargets(): Array<"claude" | "codex"> {
-  const targets: Array<"claude" | "codex"> = [];
-
-  if (projectConfigExists()) {
-    targets.push("claude");
-  }
-
-  if (codexProjectConfigExists()) {
-    targets.push("codex");
-  }
-
-  return targets;
 }
 
 function formatOutcomeMessage(outcome: UpdateOutcome): string {
@@ -129,54 +90,14 @@ function printTargetSummary(
   }
 }
 
-async function ensureGitignoreForFinalWrapperState(): Promise<void> {
-  const referencedWrappers = await collectReferencedWrapperPaths();
-
-  if (referencedWrappers.size > 0) {
-    await ensureMcpkitGitignoreBlock();
-  }
-}
-
-async function runClaudeUpdateFlow(): Promise<void> {
-  const projectConfig = await readProjectConfig();
-  const registry = await readRegistry();
-  const outcomes: UpdateOutcome[] = [];
-
-  for (const serverName of Object.keys(projectConfig.mcpServers)) {
-    const registryEntry = registry.servers[serverName];
-
-    if (!registryEntry) {
-      outcomes.push({ kind: "preserved_missing_registry", serverName });
-      continue;
-    }
-
-    const emitted = await emitClaudeProjectServer(serverName, registryEntry);
-
-    if (emitted.skipped) {
-      outcomes.push({
-        kind: "preserved_skipped",
-        serverName,
-        reason: emitted.reason ?? "could not be refreshed safely",
-      });
-      continue;
-    }
-
-    projectConfig.mcpServers[serverName] = emitted.config!;
-    outcomes.push({
-      kind: emitted.usedWrapper ? "refreshed_wrapper" : "refreshed_direct",
-      serverName,
-    });
-  }
-
-  await writeProjectConfig(projectConfig);
-  printTargetSummary("Claude Code", outcomes, ".mcp.json");
-}
-
-async function runCodexUpdateFlow(): Promise<void> {
-  const projectConfig = await readCodexProjectConfig();
-  const registry = await readCodexRegistry();
-  const projectServers = ensureCodexMcpServers(projectConfig);
-  const registryServers = ensureCodexMcpServers(registry);
+async function runUpdateFlow<TConfig, TRegistry, TServer>(
+  adapter: ProjectTargetAdapter<TConfig, TRegistry, TServer>,
+): Promise<void> {
+  const copy = getUpdateProjectTargetCopy(adapter.key);
+  const projectConfig = await adapter.readConfig();
+  const registry = await adapter.readRegistry();
+  const projectServers = adapter.getProjectServers(projectConfig);
+  const registryServers = adapter.getRegistryServers(registry);
   const outcomes: UpdateOutcome[] = [];
 
   for (const serverName of Object.keys(projectServers)) {
@@ -187,7 +108,7 @@ async function runCodexUpdateFlow(): Promise<void> {
       continue;
     }
 
-    const emitted = await emitCodexProjectServer(serverName, registryEntry);
+    const emitted = await adapter.emitProjectServer(serverName, registryEntry);
 
     if (emitted.skipped) {
       outcomes.push({
@@ -205,15 +126,24 @@ async function runCodexUpdateFlow(): Promise<void> {
     });
   }
 
-  await writeCodexProjectConfig(projectConfig);
-  printTargetSummary("Codex CLI", outcomes, ".codex/config.toml");
+  await adapter.writeConfig(projectConfig);
+  printTargetSummary(copy.summaryLabel, outcomes, adapter.configPath);
+}
+
+async function runUpdateFlowForTarget(target: McpTarget): Promise<void> {
+  if (target === "claude") {
+    await runUpdateFlow(getProjectTargetAdapter("claude"));
+    return;
+  }
+
+  await runUpdateFlow(getProjectTargetAdapter("codex"));
 }
 
 /**
  * Command handler for 'mcpkit refresh'
  */
 export async function refreshCommand(options: TargetOptions): Promise<void> {
-  const requestedTargets = getRequestedTargets(options);
+  const requestedTargets = getExplicitTargets(options);
 
   if (requestedTargets.length === 0) {
     const detectedTargets = getDetectedTargets();
@@ -224,38 +154,22 @@ export async function refreshCommand(options: TargetOptions): Promise<void> {
     }
 
     for (const target of detectedTargets) {
-      if (target === "claude") {
-        await runClaudeUpdateFlow();
-      } else {
-        await runCodexUpdateFlow();
-      }
+      await runUpdateFlowForTarget(target);
     }
 
-    await syncLoadEnvWithReferencedWrappers();
-    await ensureGitignoreForFinalWrapperState();
+    await reconcileProjectRuntimeArtifacts();
     return;
   }
 
   let ranAnyTarget = false;
 
   for (const target of requestedTargets) {
-    if (target === "claude") {
-      if (!projectConfigExists()) {
-        printMissingTargetConfigMessage("claude");
-        continue;
-      }
-
-      await runClaudeUpdateFlow();
-      ranAnyTarget = true;
+    if (!getProjectTargetAdapter(target).configExists()) {
+      printMissingTargetConfigMessage(target);
       continue;
     }
 
-    if (!codexProjectConfigExists()) {
-      printMissingTargetConfigMessage("codex");
-      continue;
-    }
-
-    await runCodexUpdateFlow();
+    await runUpdateFlowForTarget(target);
     ranAnyTarget = true;
   }
 
@@ -263,6 +177,5 @@ export async function refreshCommand(options: TargetOptions): Promise<void> {
     return;
   }
 
-  await syncLoadEnvWithReferencedWrappers();
-  await ensureGitignoreForFinalWrapperState();
+  await reconcileProjectRuntimeArtifacts();
 }

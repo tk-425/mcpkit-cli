@@ -1,42 +1,19 @@
 import { checkbox, confirm } from "@inquirer/prompts";
 import chalk from "chalk";
 import {
-  removeServerFromProject,
-  projectConfigExists,
-  readProjectConfig,
-} from "../utils/project-config.js";
+  getCommonProjectTargetCopy,
+  getRemoveProjectTargetCopy,
+} from "../utils/project-target-copy/index.js";
 import {
-  removeServerFromCodexProject,
-  codexProjectConfigExists,
-  readCodexProjectConfig,
-  ensureCodexMcpServers,
-} from "../utils/codex-config.js";
-import {
-  type TargetOptions,
-} from "../utils/targets.js";
+  getProjectTargetAdapter,
+  sortCaseInsensitive,
+  type ProjectTargetAdapter,
+} from "../utils/project-target-adapter.js";
+import type { McpTarget, TargetOptions } from "../utils/targets.js";
 import { resolveProjectTargets } from "./project-targets.js";
 import {
-  cleanupUnusedWrapper,
-  collectReferencedWrapperPaths,
-  syncLoadEnvWithReferencedWrappers,
+  reconcileProjectRuntime,
 } from "../utils/project-runtime.js";
-import { getProjectRuntimeBinDirPath } from "../utils/paths.js";
-import { resolve } from "path";
-
-function getWrapperCommandPath(command: unknown): string | null {
-  if (typeof command !== "string") {
-    return null;
-  }
-
-  const runtimeBinDir = resolve(getProjectRuntimeBinDirPath());
-  const resolvedCommand = resolve(command);
-
-  if (resolvedCommand.startsWith(`${runtimeBinDir}/`)) {
-    return resolvedCommand;
-  }
-
-  return null;
-}
 
 async function promptServerRemoval(
   serverNames: string[],
@@ -60,116 +37,62 @@ async function promptServerRemoval(
   });
 }
 
-async function runClaudeRemoveFlow(): Promise<void> {
-  if (!projectConfigExists()) {
-    console.error(chalk.red("Error: .mcp.json not found in current directory"));
-    console.log(
-      chalk.gray('Use "mcpkit init --claude" or "mcpkit init" to create it first'),
-    );
+async function runRemoveFlow<TConfig, TRegistry, TServer>(
+  adapter: ProjectTargetAdapter<TConfig, TRegistry, TServer>,
+): Promise<void> {
+  const commonCopy = getCommonProjectTargetCopy(adapter.key);
+  const copy = getRemoveProjectTargetCopy(adapter.key);
+  if (!adapter.configExists()) {
+    console.error(chalk.red(commonCopy.missingConfigError));
+    console.log(chalk.gray(commonCopy.missingConfigHint));
     return;
   }
 
-  const config = await readProjectConfig();
-  const serverNames = Object.keys(config.mcpServers).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+  const config = await adapter.readConfig();
+  const projectServers = adapter.getProjectServers(config);
+  const serverNames = sortCaseInsensitive(Object.keys(projectServers));
 
   if (serverNames.length === 0) {
-    console.log(chalk.yellow("No Claude Code MCP servers found in .mcp.json"));
+    console.log(chalk.yellow(copy.emptyMessage));
     return;
   }
 
   const serversToRemove = await promptServerRemoval(
     serverNames,
-    "Select Claude Code MCP servers to remove from .mcp.json:",
+    copy.selectionMessage,
   );
 
   if (serversToRemove.length === 0) {
-    console.log(chalk.yellow("No Claude Code servers selected for removal."));
+    console.log(chalk.yellow("No servers selected for removal."));
     return;
   }
 
   const confirmed = await confirm({
-    message: `Remove ${serversToRemove.length} Claude server(s) from .mcp.json?`,
+    message: copy.confirmMessage(serversToRemove.length),
     default: false,
   });
 
   if (!confirmed) {
-    console.log(chalk.yellow("Claude Code removal cancelled."));
+    console.log(chalk.yellow(copy.cancelledMessage));
     return;
   }
 
   for (const serverName of serversToRemove) {
-    const wrapperPath = getWrapperCommandPath(config.mcpServers[serverName]?.command);
-    await removeServerFromProject(serverName);
+    await adapter.removeServer(serverName);
 
-    if (wrapperPath && !wrapperPath.endsWith("/load-env")) {
-      const referencedPaths = await collectReferencedWrapperPaths();
-      if (!referencedPaths.has(wrapperPath)) {
-        await cleanupUnusedWrapper(wrapperPath);
-      }
-    }
-
-    console.log(chalk.green(`✓ Removed "${serverName}" from .mcp.json`));
+    console.log(chalk.green(copy.successMessage(serverName)));
   }
 
-  await syncLoadEnvWithReferencedWrappers();
+  await reconcileProjectRuntime();
 }
 
-async function runCodexRemoveFlow(): Promise<void> {
-  if (!codexProjectConfigExists()) {
-    console.error(
-      chalk.red("Error: .codex/config.toml not found in current directory"),
-    );
-    console.log(
-      chalk.gray('Use "mcpkit init --codex" or "mcpkit init" to create it first'),
-    );
+async function runRemoveFlowForTarget(target: McpTarget): Promise<void> {
+  if (target === "claude") {
+    await runRemoveFlow(getProjectTargetAdapter("claude"));
     return;
   }
 
-  const config = await readCodexProjectConfig();
-  const serverNames = Object.keys(ensureCodexMcpServers(config)).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
-
-  if (serverNames.length === 0) {
-    console.log(chalk.yellow("No Codex CLI MCP servers found in .codex/config.toml"));
-    return;
-  }
-
-  const serversToRemove = await promptServerRemoval(
-    serverNames,
-    "Select Codex CLI MCP servers to remove from .codex/config.toml:",
-  );
-
-  if (serversToRemove.length === 0) {
-    console.log(chalk.yellow("No Codex CLI servers selected for removal."));
-    return;
-  }
-
-  const confirmed = await confirm({
-    message: `Remove ${serversToRemove.length} Codex server(s) from .codex/config.toml?`,
-    default: false,
-  });
-
-  if (!confirmed) {
-    console.log(chalk.yellow("Codex CLI removal cancelled."));
-    return;
-  }
-
-  for (const serverName of serversToRemove) {
-    const wrapperPath = getWrapperCommandPath(ensureCodexMcpServers(config)[serverName]?.command);
-    await removeServerFromCodexProject(serverName);
-
-    if (wrapperPath && !wrapperPath.endsWith("/load-env")) {
-      const referencedPaths = await collectReferencedWrapperPaths();
-      if (!referencedPaths.has(wrapperPath)) {
-        await cleanupUnusedWrapper(wrapperPath);
-      }
-    }
-
-    console.log(
-      chalk.green(`✓ Removed "${serverName}" from .codex/config.toml`),
-    );
-  }
-
-  await syncLoadEnvWithReferencedWrappers();
+  await runRemoveFlow(getProjectTargetAdapter("codex"));
 }
 
 /**
@@ -180,11 +103,7 @@ export async function removeCommand(options: TargetOptions): Promise<void> {
     const targets = await resolveProjectTargets(options);
 
     for (const target of targets) {
-      if (target === "claude") {
-        await runClaudeRemoveFlow();
-      } else {
-        await runCodexRemoveFlow();
-      }
+      await runRemoveFlowForTarget(target);
     }
   } catch (error) {
     throw error;
