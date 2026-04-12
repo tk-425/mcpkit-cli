@@ -1,27 +1,20 @@
 import { checkbox, confirm } from "@inquirer/prompts";
 import chalk from "chalk";
-import { readRegistry } from "../utils/registry.js";
 import {
-  writeProjectConfig,
-  readProjectConfig,
-  projectConfigExists,
-} from "../utils/project-config.js";
-import type { ProjectConfig } from "../utils/project-config.js";
+  getAddProjectTargetCopy,
+  getInitProjectTargetCopy,
+} from "../utils/project-target-copy/index.js";
 import {
-  readCodexRegistry,
-  readCodexProjectConfigOrDefault,
-  writeCodexProjectConfig,
-  codexProjectConfigExists,
-  ensureCodexMcpServers,
-  type CodexConfigFile,
-} from "../utils/codex-config.js";
-import {
-  type TargetOptions,
+  getProjectTargetAdapter,
+  sortCaseInsensitive,
+  type ProjectTargetAdapter,
+} from "../utils/project-target-adapter.js";
+import type {
+  McpTarget,
+  TargetOptions,
 } from "../utils/targets.js";
 import { resolveProjectTargets } from "./project-targets.js";
-import { emitClaudeProjectServer, emitCodexProjectServer } from "../utils/project-emitter.js";
-import { ensureMcpkitGitignoreBlock } from "../utils/gitignore.js";
-import { syncLoadEnvWithReferencedWrappers } from "../utils/project-runtime.js";
+import { reconcileProjectRuntimeArtifacts } from "../utils/project-runtime.js";
 
 async function promptServerSelection(
   serverNames: string[],
@@ -45,27 +38,27 @@ async function promptServerSelection(
   });
 }
 
-async function runClaudeInitFlow(): Promise<void> {
-  const registry = await readRegistry();
-  const serverNames = Object.keys(registry.servers).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+async function runInitFlow<TConfig, TRegistry, TServer>(
+  adapter: ProjectTargetAdapter<TConfig, TRegistry, TServer>,
+): Promise<void> {
+  const copy = getInitProjectTargetCopy(adapter.key);
+  const addCopy = getAddProjectTargetCopy(adapter.key);
+  const registry = await adapter.readRegistry();
+  const registryServers = adapter.getRegistryServers(registry);
+  const serverNames = sortCaseInsensitive(Object.keys(registryServers));
 
   if (serverNames.length === 0) {
-    console.log(chalk.yellow("No Claude Code MCP servers in registry."));
-    console.log(
-      chalk.gray(
-        'Use "mcpkit registry add --claude" to add servers to your registry first.',
-      ),
-    );
+    console.log(chalk.yellow(copy.emptyRegistryMessage));
+    console.log(chalk.gray(copy.emptyRegistryHint));
     return;
   }
 
-  const configExists = projectConfigExists();
+  const configExists = adapter.configExists();
   let shouldMerge = false;
 
   if (configExists) {
     const action = await confirm({
-      message:
-        ".mcp.json already exists. Do you want to merge with existing servers?",
+      message: copy.mergePrompt,
       default: true,
     });
 
@@ -73,12 +66,12 @@ async function runClaudeInitFlow(): Promise<void> {
       shouldMerge = true;
     } else {
       const shouldOverwrite = await confirm({
-        message: "Overwrite existing .mcp.json?",
+        message: copy.overwritePrompt,
         default: false,
       });
 
       if (!shouldOverwrite) {
-        console.log(chalk.yellow("Claude Code init cancelled."));
+        console.log(chalk.yellow(copy.cancelledMessage));
         return;
       }
     }
@@ -86,176 +79,73 @@ async function runClaudeInitFlow(): Promise<void> {
 
   const selectedServers = await promptServerSelection(
     serverNames,
-    "Select Claude Code MCP servers for .mcp.json:",
+    copy.selectionMessage,
   );
 
   if (selectedServers.length === 0) {
-    console.log(chalk.yellow("No Claude Code servers selected. Cancelled."));
+    console.log(chalk.yellow(addCopy.cancelledMessage));
     return;
   }
 
-  let projectConfig: ProjectConfig;
-  let usedWrapper = false;
+  const projectConfig = configExists
+    ? shouldMerge
+      ? await adapter.readConfig()
+      : await adapter.readConfigOrDefault()
+    : adapter.createEmptyConfig();
+
+  if (configExists && !shouldMerge) {
+    adapter.resetServers(projectConfig);
+  }
+
+  const projectServers = adapter.getProjectServers(projectConfig);
   const skippedServers: string[] = [];
   let addedCount = 0;
 
-  if (shouldMerge && configExists) {
-    projectConfig = await readProjectConfig();
-  } else {
-    projectConfig = { mcpServers: {} };
-  }
-
   for (const serverName of selectedServers) {
-    const emitted = await emitClaudeProjectServer(serverName, registry.servers[serverName]);
-    if (emitted.skipped) {
-      skippedServers.push(emitted.reason ?? `Skipped "${serverName}"`);
-      continue;
-    }
-
-    projectConfig.mcpServers[serverName] = emitted.config!;
-    usedWrapper = usedWrapper || emitted.usedWrapper;
-    addedCount += 1;
-  }
-
-  if (usedWrapper) {
-    await ensureMcpkitGitignoreBlock();
-  }
-
-  if (addedCount === 0) {
-    console.log(chalk.yellow("No Claude Code servers were added."));
-    skippedServers.forEach((message) => {
-      console.log(chalk.yellow(`  • ${message}`));
-    });
-    return;
-  }
-
-  await writeProjectConfig(projectConfig);
-  await syncLoadEnvWithReferencedWrappers();
-
-  console.log(
-    chalk.green(
-      `\n✓ Created .mcp.json with ${selectedServers.length} Claude server${selectedServers.length === 1 ? "" : "s"}`,
-    ),
-  );
-  console.log(chalk.gray("Selected Claude Code servers:"));
-  selectedServers.forEach((name) => {
-    console.log(chalk.gray(`  • ${name}`));
-  });
-  if (skippedServers.length > 0) {
-    console.log(chalk.yellow("\nSkipped Claude Code servers:"));
-    skippedServers.forEach((message) => {
-      console.log(chalk.yellow(`  • ${message}`));
-    });
-  }
-}
-
-async function runCodexInitFlow(): Promise<void> {
-  const registry = await readCodexRegistry();
-  const registryServers = ensureCodexMcpServers(registry);
-  const serverNames = Object.keys(registryServers).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
-
-  if (serverNames.length === 0) {
-    console.log(chalk.yellow("No Codex CLI MCP servers in registry."));
-    console.log(
-      chalk.gray(
-        'Use "mcpkit registry add --codex" to add servers to your registry first.',
-      ),
+    const emitted = await adapter.emitProjectServer(
+      serverName,
+      registryServers[serverName],
     );
-    return;
-  }
-
-  const configExists = codexProjectConfigExists();
-  let shouldMerge = false;
-
-  if (configExists) {
-    const action = await confirm({
-      message:
-        ".codex/config.toml already exists. Do you want to merge with existing servers?",
-      default: true,
-    });
-
-    if (action) {
-      shouldMerge = true;
-    } else {
-      const shouldOverwrite = await confirm({
-        message: "Overwrite MCP server entries in .codex/config.toml?",
-        default: false,
-      });
-
-      if (!shouldOverwrite) {
-        console.log(chalk.yellow("Codex CLI init cancelled."));
-        return;
-      }
-    }
-  }
-
-  const selectedServers = await promptServerSelection(
-    serverNames,
-    "Select Codex CLI MCP servers for .codex/config.toml:",
-  );
-
-  if (selectedServers.length === 0) {
-    console.log(chalk.yellow("No Codex CLI servers selected. Cancelled."));
-    return;
-  }
-
-  let projectConfig: CodexConfigFile;
-  let usedWrapper = false;
-  const skippedServers: string[] = [];
-  let addedCount = 0;
-
-  if (configExists) {
-    projectConfig = await readCodexProjectConfigOrDefault();
-    if (!shouldMerge) {
-      projectConfig.mcp_servers = {};
-    }
-  } else {
-    projectConfig = { mcp_servers: {} };
-  }
-
-  const projectServers = ensureCodexMcpServers(projectConfig);
-  for (const serverName of selectedServers) {
-    const emitted = await emitCodexProjectServer(serverName, registryServers[serverName]);
     if (emitted.skipped) {
       skippedServers.push(emitted.reason ?? `Skipped "${serverName}"`);
       continue;
     }
 
     projectServers[serverName] = emitted.config!;
-    usedWrapper = usedWrapper || emitted.usedWrapper;
     addedCount += 1;
   }
 
-  if (usedWrapper) {
-    await ensureMcpkitGitignoreBlock();
-  }
-
   if (addedCount === 0) {
-    console.log(chalk.yellow("No Codex CLI servers were added."));
+    console.log(chalk.yellow(copy.noChangesMessage));
     skippedServers.forEach((message) => {
       console.log(chalk.yellow(`  • ${message}`));
     });
     return;
   }
 
-  await writeCodexProjectConfig(projectConfig);
-  await syncLoadEnvWithReferencedWrappers();
+  await adapter.writeConfig(projectConfig);
+  await reconcileProjectRuntimeArtifacts();
 
-  console.log(
-    chalk.green(
-      `\n✓ Updated .codex/config.toml with ${selectedServers.length} Codex server${selectedServers.length === 1 ? "" : "s"}`,
-    ),
-  );
-  console.log(chalk.gray("Selected Codex CLI servers:"));
+  console.log(chalk.green(copy.successMessage(selectedServers.length)));
+  console.log(chalk.gray(copy.selectedHeading));
   selectedServers.forEach((name) => {
     console.log(chalk.gray(`  • ${name}`));
   });
   if (skippedServers.length > 0) {
-    console.log(chalk.yellow("\nSkipped Codex CLI servers:"));
+    console.log(chalk.yellow(`\n${copy.skippedServersHeading}`));
     skippedServers.forEach((message) => {
       console.log(chalk.yellow(`  • ${message}`));
     });
   }
+}
+
+async function runInitFlowForTarget(target: McpTarget): Promise<void> {
+  if (target === "claude") {
+    await runInitFlow(getProjectTargetAdapter("claude"));
+    return;
+  }
+
+  await runInitFlow(getProjectTargetAdapter("codex"));
 }
 
 /**
@@ -266,11 +156,7 @@ export async function initCommand(options: TargetOptions): Promise<void> {
     const targets = await resolveProjectTargets(options);
 
     for (const target of targets) {
-      if (target === "claude") {
-        await runClaudeInitFlow();
-      } else {
-        await runCodexInitFlow();
-      }
+      await runInitFlowForTarget(target);
     }
   } catch (error) {
     throw error;

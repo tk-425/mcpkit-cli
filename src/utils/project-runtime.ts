@@ -1,6 +1,7 @@
 import { existsSync } from 'fs';
-import { chmod, mkdir, readFile, realpath, rm, writeFile } from 'fs/promises';
+import { chmod, mkdir, readFile, readdir, realpath, rm, writeFile } from 'fs/promises';
 import { basename, dirname, resolve } from 'path';
+import { ensureMcpkitGitignoreBlock } from './gitignore.js';
 import {
   getProjectRuntimeBinDirPath,
   getProjectRuntimeDirPath,
@@ -186,6 +187,44 @@ export async function syncLoadEnvWithReferencedWrappers(): Promise<boolean> {
   const loadEnvNames = await collectReferencedLoadEnvNames();
   const result = await ensureLoadEnvScript(loadEnvNames);
   return result.wroteRuntime || result.wroteLoadEnv;
+}
+
+export async function reconcileProjectRuntime(): Promise<void> {
+  const runtimeBinDirPath = getProjectRuntimeBinDirPath();
+
+  if (existsSync(runtimeBinDirPath)) {
+    const runtimeBinDir = await canonicalizePath(runtimeBinDirPath);
+    const referencedPaths = await collectReferencedWrapperPaths();
+    const entries = await readdir(runtimeBinDirPath, { withFileTypes: true });
+
+    for (const entry of entries) {
+      if (!entry.isFile() || entry.name === 'load-env') {
+        continue;
+      }
+
+      const entryPath = await canonicalizePath(resolve(runtimeBinDirPath, entry.name));
+
+      if (!entryPath.startsWith(runtimeBinDir + '/')) {
+        continue;
+      }
+
+      if (!referencedPaths.has(entryPath)) {
+        await rm(entryPath);
+      }
+    }
+  }
+
+  await syncLoadEnvWithReferencedWrappers();
+}
+
+export async function reconcileProjectRuntimeArtifacts(): Promise<void> {
+  await reconcileProjectRuntime();
+
+  const referencedWrappers = await collectReferencedWrapperPaths();
+
+  if (referencedWrappers.size > 0) {
+    await ensureMcpkitGitignoreBlock();
+  }
 }
 
 export async function cleanupUnusedWrapper(wrapperPath: string): Promise<boolean> {
