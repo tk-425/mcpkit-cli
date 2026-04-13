@@ -54,9 +54,90 @@ Notes:
 - `.mcpkit/` is generated runtime state and `mcpkit` adds it to `.gitignore` through a managed block
 - `load-env` is a macOS-oriented first-pass helper for best-effort Keychain-backed env loading
 - `load-env` is derived from the env interpolation actually used by wrapper-backed servers in the current project
+- for Keychain-backed loading, the macOS Keychain item service name must match the env var exactly, for example `API_KEY`
 - per-server wrappers still validate required env vars before launching the underlying MCP command
 - `mcpkit remove` cleans up unreferenced per-server wrappers conservatively, but does not remove `.mcpkit/` or the managed `.gitignore` block automatically in the first pass
 - `mcpkit edit` is not yet wrapper-aware; editing emitted wrapper-backed entries directly can drift from registry metadata
+
+## Keychain-Backed `${API_KEY}` Example
+
+If a registry entry uses `${API_KEY}`, save the secret into your macOS Keychain before you add or initialize that server in a project.
+
+Save the key:
+
+```bash
+security add-generic-password -U -a "$USER" -s API_KEY -w 'your-real-api-key'
+```
+
+Verify the key exists:
+
+```bash
+security find-generic-password -a "$USER" -s API_KEY -w
+```
+
+How this maps at runtime:
+
+- account: your current macOS username (`$USER`)
+- service: the env var name, for example `API_KEY`
+- wrapper behavior: `.mcpkit/bin/load-env` tries Keychain first, exports `API_KEY` if found, then the per-server wrapper validates that `API_KEY` is set before launching the MCP server
+
+### Example 1: stdio server using `${API_KEY}`
+
+Add the server to the Codex registry:
+
+```bash
+mcpkit registry add --codex
+```
+
+Example input:
+
+```toml
+[mcp_servers.my-api-server]
+command = "npx"
+args = ["-y", "@example/my-api-mcp"]
+
+[mcp_servers.my-api-server.env]
+API_KEY = "${API_KEY}"
+```
+
+Then add it to your project:
+
+```bash
+mcpkit add --codex
+```
+
+`mcpkit` will detect `${API_KEY}`, generate a wrapper under `.mcpkit/bin/`, and emit the project entry with `command` pointing at that wrapper instead of copying the raw interpolation directly into `.codex/config.toml`.
+
+### Example 2: remote/http server using `Authorization: Bearer ${API_KEY}`
+
+Add the server to the Claude registry:
+
+```bash
+mcpkit registry add --claude
+```
+
+Example input:
+
+```json
+{
+  "my-remote-server": {
+    "url": "https://api.example.com/mcp",
+    "headers": {
+      "Authorization": "Bearer ${API_KEY}"
+    }
+  }
+}
+```
+
+Then add it to your project:
+
+```bash
+mcpkit add --claude
+```
+
+For this supported remote/http auth shape, `mcpkit` converts the entry into a local `supergateway` launcher, wraps that launcher under `.mcpkit/bin/`, and still emits native project config in `.mcp.json`.
+
+If the remote/http config uses a more complex env injection shape than the supported header pattern above, `mcpkit` will warn and skip it instead of emitting unsafe raw interpolation into project config.
 
 ## Installation
 
