@@ -3,6 +3,7 @@ import { describe, expect, test } from "@jest/globals";
 import {
   getAddProjectTargetCopy,
   getCommonProjectTargetCopy,
+  getEditProjectTargetCopy,
   getUpdateProjectTargetCopy,
 } from "../dist/utils/project-target-copy/index.js";
 
@@ -23,5 +24,17 @@ describe("project target copy", () => {
     expect(commonCopy.missingConfigError).toContain(".codex/config.toml");
     expect(addCopy.selectionMessage).toContain("Codex CLI");
     expect(updateCopy.summaryLabel).toBe("Codex CLI");
+  });
+
+  test("returns OpenCode-specific common and add copy", () => {
+    const commonCopy = getCommonProjectTargetCopy("opencode");
+    const addCopy = getAddProjectTargetCopy("opencode");
+    const editCopy = getEditProjectTargetCopy("opencode");
+    const updateCopy = getUpdateProjectTargetCopy("opencode");
+
+    expect(commonCopy.missingConfigError).toContain("opencode.json");
+    expect(addCopy.selectionMessage).toContain("OpenCode CLI");
+    expect(editCopy.instruction).toBe("  1. Edit the OpenCode JSON server entry");
+    expect(updateCopy.summaryLabel).toBe("OpenCode CLI");
   });
 });

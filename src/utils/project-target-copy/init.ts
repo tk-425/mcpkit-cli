@@ -43,6 +43,20 @@ const INIT_PROJECT_TARGET_COPY: Record<McpTarget, InitProjectTargetCopy> = {
     successMessage: (count) =>
       `\n✓ Updated .codex/config.toml with ${count} Codex server${count === 1 ? "" : "s"}`,
   },
+  opencode: {
+    emptyRegistryMessage: "No OpenCode CLI MCP servers in registry.",
+    emptyRegistryHint:
+      'Use "mcpkit registry add --opencode" to add servers to your registry first.',
+    mergePrompt: "opencode.json already exists. Do you want to merge with existing servers?",
+    overwritePrompt: "Overwrite MCP server entries in opencode.json?",
+    selectionMessage: "Select OpenCode CLI MCP servers for opencode.json:",
+    cancelledMessage: "OpenCode CLI init cancelled.",
+    noChangesMessage: "No OpenCode CLI servers were added.",
+    selectedHeading: "Selected OpenCode CLI servers:",
+    skippedServersHeading: "Skipped OpenCode CLI servers:",
+    successMessage: (count) =>
+      `\n✓ Updated opencode.json with ${count} OpenCode server${count === 1 ? "" : "s"}`,
+  },
 };
 
 export function getInitProjectTargetCopy(

@@ -30,6 +30,13 @@ export function getCodexRegistryPath(): string {
 }
 
 /**
+ * Get the path to the OpenCode registry file (~/.mcpkit/opencode-mcp-servers.json)
+ */
+export function getOpenCodeRegistryPath(): string {
+  return join(getRegistryDir(), 'opencode-mcp-servers.json');
+}
+
+/**
  * Get the path to the Claude project config file (.mcp.json in current directory)
  */
 export function getClaudeProjectConfigPath(): string {
@@ -48,6 +55,13 @@ export function getCodexProjectDirPath(): string {
  */
 export function getCodexProjectConfigPath(): string {
   return join(getCodexProjectDirPath(), 'config.toml');
+}
+
+/**
+ * Get the path to the OpenCode project config file (opencode.json in current directory)
+ */
+export function getOpenCodeProjectConfigPath(): string {
+  return join(process.cwd(), 'opencode.json');
 }
 
 /**

@@ -108,12 +108,7 @@ async function runAddFlow<TConfig, TRegistry, TServer>(
 }
 
 async function runAddFlowForTarget(target: McpTarget): Promise<void> {
-  if (target === "claude") {
-    await runAddFlow(getProjectTargetAdapter("claude"));
-    return;
-  }
-
-  await runAddFlow(getProjectTargetAdapter("codex"));
+  await runAddFlow(getProjectTargetAdapter(target) as ProjectTargetAdapter<any, any, any>);
 }
 
 /**

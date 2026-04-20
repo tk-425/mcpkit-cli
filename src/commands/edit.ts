@@ -73,12 +73,7 @@ async function runEditFlow<TConfig, TRegistry, TServer>(
 }
 
 async function runEditFlowForTarget(target: McpTarget): Promise<void> {
-  if (target === "claude") {
-    await runEditFlow(getProjectTargetAdapter("claude"));
-    return;
-  }
-
-  await runEditFlow(getProjectTargetAdapter("codex"));
+  await runEditFlow(getProjectTargetAdapter(target) as ProjectTargetAdapter<any, any, any>);
 }
 
 /**

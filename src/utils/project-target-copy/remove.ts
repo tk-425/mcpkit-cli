@@ -25,6 +25,13 @@ const REMOVE_PROJECT_TARGET_COPY: Record<McpTarget, RemoveProjectTargetCopy> = {
       `Remove ${count} Codex server(s) from .codex/config.toml?`,
     successMessage: (name) => `✓ Removed "${name}" from .codex/config.toml`,
   },
+  opencode: {
+    selectionMessage: "Select OpenCode CLI MCP servers to remove from opencode.json:",
+    emptyMessage: "No OpenCode CLI MCP servers found in opencode.json",
+    cancelledMessage: "OpenCode CLI removal cancelled.",
+    confirmMessage: (count) => `Remove ${count} OpenCode server(s) from opencode.json?`,
+    successMessage: (name) => `✓ Removed "${name}" from opencode.json`,
+  },
 };
 
 export function getRemoveProjectTargetCopy(

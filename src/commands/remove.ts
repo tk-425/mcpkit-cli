@@ -87,12 +87,7 @@ async function runRemoveFlow<TConfig, TRegistry, TServer>(
 }
 
 async function runRemoveFlowForTarget(target: McpTarget): Promise<void> {
-  if (target === "claude") {
-    await runRemoveFlow(getProjectTargetAdapter("claude"));
-    return;
-  }
-
-  await runRemoveFlow(getProjectTargetAdapter("codex"));
+  await runRemoveFlow(getProjectTargetAdapter(target) as ProjectTargetAdapter<any, any, any>);
 }
 
 /**

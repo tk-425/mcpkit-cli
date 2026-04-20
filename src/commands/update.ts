@@ -28,7 +28,7 @@ function printNoProjectConfigMessage(): void {
   );
 }
 
-function printMissingTargetConfigMessage(target: "claude" | "codex"): void {
+function printMissingTargetConfigMessage(target: McpTarget): void {
   const adapter = getProjectTargetAdapter(target);
   const copy = getCommonProjectTargetCopy(target);
   console.log(chalk.yellow(`No ${adapter.configPath} found in the current directory.`));
@@ -131,12 +131,7 @@ async function runUpdateFlow<TConfig, TRegistry, TServer>(
 }
 
 async function runUpdateFlowForTarget(target: McpTarget): Promise<void> {
-  if (target === "claude") {
-    await runUpdateFlow(getProjectTargetAdapter("claude"));
-    return;
-  }
-
-  await runUpdateFlow(getProjectTargetAdapter("codex"));
+  await runUpdateFlow(getProjectTargetAdapter(target) as ProjectTargetAdapter<any, any, any>);
 }
 
 /**

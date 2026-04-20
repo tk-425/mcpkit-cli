@@ -20,6 +20,7 @@ export async function promptProjectTargets(): Promise<McpTarget[]> {
     choices: [
       { name: "Claude Code", value: "claude", checked: false },
       { name: "Codex CLI", value: "codex", checked: false },
+      { name: "OpenCode CLI", value: "opencode", checked: false },
     ],
     required: false,
   });

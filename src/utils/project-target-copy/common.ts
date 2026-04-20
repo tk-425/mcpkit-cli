@@ -14,6 +14,10 @@ const COMMON_PROJECT_TARGET_COPY: Record<McpTarget, CommonProjectTargetCopy> = {
     missingConfigError: "Error: .codex/config.toml not found in current directory",
     missingConfigHint: 'Use "mcpkit init --codex" or "mcpkit init" to create it first',
   },
+  opencode: {
+    missingConfigError: "Error: opencode.json not found in current directory",
+    missingConfigHint: 'Use "mcpkit init --opencode" or "mcpkit init" to create it first',
+  },
 };
 
 export function getCommonProjectTargetCopy(

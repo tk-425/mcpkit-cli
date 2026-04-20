@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import { readRegistry } from '../utils/registry.js';
 import { readCodexRegistry, ensureCodexMcpServers } from '../utils/codex-config.js';
+import { ensureOpenCodeMcpServers, readOpenCodeRegistry } from '../utils/opencode-config.js';
 import { getExplicitTargets, type TargetOptions } from '../utils/targets.js';
 
 interface RegistryListCommandOptions extends TargetOptions {
@@ -65,6 +66,34 @@ function renderCodexRegistry(
   console.log(chalk.gray(`Total: ${serverNames.length} server${serverNames.length === 1 ? '' : 's'}`));
 }
 
+function renderOpenCodeRegistry(
+  serverNames: string[],
+  registry: Awaited<ReturnType<typeof readOpenCodeRegistry>>,
+  verbose?: boolean,
+): void {
+  console.log(chalk.blue('OpenCode CLI Registry (~/.mcpkit/opencode-mcp-servers.json):'));
+
+  if (serverNames.length === 0) {
+    console.log(chalk.yellow('  No MCP servers configured'));
+    return;
+  }
+
+  const servers = ensureOpenCodeMcpServers(registry);
+
+  if (verbose) {
+    serverNames.forEach((name) => {
+      console.log(chalk.green(`\n  • ${name}`));
+      console.log(chalk.gray(`    ${renderJsonConfig(servers[name])}`));
+    });
+  } else {
+    serverNames.forEach((name) => {
+      console.log(chalk.green(`  • ${name}`));
+    });
+  }
+
+  console.log(chalk.gray(`Total: ${serverNames.length} server${serverNames.length === 1 ? '' : 's'}`));
+}
+
 /**
  * Command handler for 'mcpkit registry list'
  */
@@ -73,6 +102,7 @@ export async function registryListCommand(options: RegistryListCommandOptions): 
     const explicitTargets = getExplicitTargets(options);
     const showClaude = explicitTargets.length === 0 || explicitTargets.includes('claude');
     const showCodex = explicitTargets.length === 0 || explicitTargets.includes('codex');
+    const showOpenCode = explicitTargets.length === 0 || explicitTargets.includes('opencode');
 
     if (showClaude) {
       const registry = await readRegistry();
@@ -87,6 +117,19 @@ export async function registryListCommand(options: RegistryListCommandOptions): 
       const registry = await readCodexRegistry();
       renderCodexRegistry(
         Object.keys(ensureCodexMcpServers(registry)).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })),
+        registry,
+        options.verbose,
+      );
+    }
+
+    if ((showClaude || showCodex) && showOpenCode) {
+      console.log();
+    }
+
+    if (showOpenCode) {
+      const registry = await readOpenCodeRegistry();
+      renderOpenCodeRegistry(
+        Object.keys(ensureOpenCodeMcpServers(registry)).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })),
         registry,
         options.verbose,
       );

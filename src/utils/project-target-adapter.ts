@@ -9,10 +9,25 @@ import {
   removeServerFromCodexProject,
   writeCodexProjectConfig,
 } from "./codex-config.js";
+import type {
+  OpenCodeConfigFile,
+  OpenCodeMcpServerConfig,
+} from "./opencode-config.js";
+import {
+  addServerToOpenCodeProject,
+  ensureOpenCodeMcpServers,
+  openCodeProjectConfigExists,
+  readOpenCodeProjectConfig,
+  readOpenCodeProjectConfigOrDefault,
+  readOpenCodeRegistry,
+  removeServerFromOpenCodeProject,
+  writeOpenCodeProjectConfig,
+} from "./opencode-config.js";
 import type { EmitResult } from "./project-emitter.js";
 import {
   emitClaudeProjectServer,
   emitCodexProjectServer,
+  emitOpenCodeProjectServer,
 } from "./project-emitter.js";
 import type { ProjectConfig } from "./project-config.js";
 import {
@@ -26,7 +41,11 @@ import type { Registry, ServerConfig } from "./registry.js";
 import { readRegistry } from "./registry.js";
 import { stringifyToml } from "./toml.js";
 import type { McpTarget } from "./targets.js";
-import { parseCodexServerInput, parseServerInput } from "./validation.js";
+import {
+  parseCodexServerInput,
+  parseOpenCodeServerInput,
+  parseServerInput,
+} from "./validation.js";
 
 export interface ProjectTargetAdapter<TConfig, TRegistry, TServer> {
   key: McpTarget;
@@ -109,9 +128,37 @@ const codexProjectAdapter: ProjectTargetAdapter<
   parseEditedServerInput: parseCodexServerInput,
 };
 
+const openCodeProjectAdapter: ProjectTargetAdapter<
+  OpenCodeConfigFile,
+  OpenCodeConfigFile,
+  OpenCodeMcpServerConfig
+> = {
+  key: "opencode",
+  label: "OpenCode CLI",
+  configPath: "opencode.json",
+  configExists: openCodeProjectConfigExists,
+  readConfig: readOpenCodeProjectConfig,
+  readConfigOrDefault: readOpenCodeProjectConfigOrDefault,
+  writeConfig: writeOpenCodeProjectConfig,
+  createEmptyConfig: () => ({ mcp: {} }),
+  resetServers: (config) => {
+    config.mcp = {};
+  },
+  getProjectServers: ensureOpenCodeMcpServers,
+  readRegistry: readOpenCodeRegistry,
+  getRegistryServers: ensureOpenCodeMcpServers,
+  emitProjectServer: emitOpenCodeProjectServer,
+  addServer: addServerToOpenCodeProject,
+  removeServer: removeServerFromOpenCodeProject,
+  serializeServerForEdit: (name, config) =>
+    JSON.stringify({ [name]: config }, null, 2),
+  parseEditedServerInput: parseOpenCodeServerInput,
+};
+
 export const PROJECT_TARGET_ADAPTERS = [
   claudeProjectAdapter,
   codexProjectAdapter,
+  openCodeProjectAdapter,
 ] as const;
 
 export type AnyProjectTargetAdapter =
@@ -124,6 +171,9 @@ export function getProjectTargetAdapter(
   target: "codex",
 ): ProjectTargetAdapter<CodexConfigFile, CodexConfigFile, CodexMcpServerConfig>;
 export function getProjectTargetAdapter(
+  target: "opencode",
+): ProjectTargetAdapter<OpenCodeConfigFile, OpenCodeConfigFile, OpenCodeMcpServerConfig>;
+export function getProjectTargetAdapter(
   target: McpTarget,
 ): AnyProjectTargetAdapter;
 export function getProjectTargetAdapter(
@@ -133,5 +183,9 @@ export function getProjectTargetAdapter(
     return claudeProjectAdapter;
   }
 
-  return codexProjectAdapter;
+  if (target === "codex") {
+    return codexProjectAdapter;
+  }
+
+  return openCodeProjectAdapter;
 }

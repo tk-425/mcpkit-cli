@@ -1,9 +1,10 @@
 import type { CodexMcpServerConfig } from './codex-config.js';
+import type { OpenCodeMcpServerConfig } from './opencode-config.js';
 import { hasInterpolatedEnv, findInterpolatedEnvNames, isPureEnvReference } from './interpolation.js';
 import type { ServerConfig } from './registry.js';
 import type { WrapperConfig } from './wrapper-types.js';
 
-type NativeConfig = ServerConfig | CodexMcpServerConfig;
+type NativeConfig = ServerConfig | CodexMcpServerConfig | OpenCodeMcpServerConfig;
 
 export interface WrapperResolution {
   kind: 'direct' | 'wrap' | 'skip';
@@ -15,18 +16,23 @@ type RemoteHttpShapeSupport = 'none' | 'supported' | 'unsupported';
 type RemoteHttpHeaderSource = 'headers' | 'http_headers' | null;
 
 function normalizeCommand(config: NativeConfig): { command?: string; args: string[]; url?: string } {
+  const rawArgs = (config as { args?: unknown }).args;
+  const args = Array.isArray(rawArgs) && rawArgs.every((item) => typeof item === 'string')
+    ? rawArgs
+    : [];
+
   if (Array.isArray(config.command)) {
     const [command, ...commandArgs] = config.command;
     return {
       command,
-      args: [...commandArgs, ...(config.args ?? [])],
+      args: [...commandArgs, ...args],
       url: config.url,
     };
   }
 
   return {
     command: config.command,
-    args: config.args ?? [],
+    args,
     url: config.url,
   };
 }
@@ -172,7 +178,7 @@ function buildGenericWrapperConfig(
 function resolveCommon(
   serverName: string,
   config: NativeConfig,
-  targetLabel: 'Claude Code' | 'Codex CLI',
+  targetLabel: 'Claude Code' | 'Codex CLI' | 'OpenCode CLI',
 ): WrapperResolution {
   const normalized = normalizeCommand(config);
   const usesInterpolation = hasInterpolatedEnv(config);
@@ -235,4 +241,11 @@ export function resolveCodexWrapperConfig(
   config: CodexMcpServerConfig,
 ): WrapperResolution {
   return resolveCommon(serverName, config, 'Codex CLI');
+}
+
+export function resolveOpenCodeWrapperConfig(
+  serverName: string,
+  config: OpenCodeMcpServerConfig,
+): WrapperResolution {
+  return resolveCommon(serverName, config, 'OpenCode CLI');
 }
