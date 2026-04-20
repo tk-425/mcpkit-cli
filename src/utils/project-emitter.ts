@@ -1,9 +1,11 @@
 import type { CodexMcpServerConfig } from './codex-config.js';
+import type { OpenCodeMcpServerConfig } from './opencode-config.js';
 import { ensureServerWrapper } from './project-runtime.js';
 import type { ServerConfig } from './registry.js';
 import {
   resolveClaudeWrapperConfig,
   resolveCodexWrapperConfig,
+  resolveOpenCodeWrapperConfig,
 } from './wrapper-rules.js';
 
 export interface EmitResult<T> {
@@ -85,6 +87,47 @@ export async function emitCodexProjectServer(
     config: {
       ...rest,
       command: runtime.wrapperPath,
+    },
+    usedWrapper: true,
+    skipped: false,
+    wrapperPath: runtime.wrapperPath,
+  };
+}
+
+export async function emitOpenCodeProjectServer(
+  name: string,
+  config: OpenCodeMcpServerConfig,
+): Promise<EmitResult<OpenCodeMcpServerConfig>> {
+  const resolution = resolveOpenCodeWrapperConfig(name, config);
+
+  if (resolution.kind === 'direct') {
+    return { config, usedWrapper: false, skipped: false };
+  }
+
+  if (resolution.kind === 'skip') {
+    return {
+      usedWrapper: false,
+      skipped: true,
+      reason: resolution.reason,
+    };
+  }
+
+  const runtime = await ensureServerWrapper(resolution.wrapper!);
+  const {
+    type: _type,
+    command: _command,
+    url: _url,
+    headers: _headers,
+    environment: _environment,
+    oauth: _oauth,
+    ...rest
+  } = config;
+
+  return {
+    config: {
+      ...rest,
+      type: 'local',
+      command: [runtime.wrapperPath!],
     },
     usedWrapper: true,
     skipped: false,

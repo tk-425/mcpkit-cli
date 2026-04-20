@@ -6,6 +6,11 @@ import {
   readCodexRegistry,
   ensureCodexMcpServers,
 } from "../utils/codex-config.js";
+import {
+  ensureOpenCodeMcpServers,
+  readOpenCodeRegistry,
+  removeServerFromOpenCodeRegistry,
+} from "../utils/opencode-config.js";
 import type { TargetOptions } from "../utils/targets.js";
 import { resolveSingleRegistryTarget } from "./registry-targets.js";
 
@@ -21,17 +26,20 @@ export async function registryRemoveCommand(options: TargetOptions): Promise<voi
       return;
     }
 
-    const serverNames =
-      target === "claude"
-        ? Object.keys((await readRegistry()).servers).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
-        : Object.keys(ensureCodexMcpServers(await readCodexRegistry())).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+    const serverNames = target === "claude"
+      ? Object.keys((await readRegistry()).servers).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
+      : target === "codex"
+        ? Object.keys(ensureCodexMcpServers(await readCodexRegistry())).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
+        : Object.keys(ensureOpenCodeMcpServers(await readOpenCodeRegistry())).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
 
     if (serverNames.length === 0) {
       console.log(
         chalk.yellow(
           target === "claude"
             ? "No MCP servers found in Claude registry"
-            : "No MCP servers found in Codex registry",
+            : target === "codex"
+              ? "No MCP servers found in Codex registry"
+              : "No MCP servers found in OpenCode registry",
         ),
       );
       return;
@@ -41,7 +49,9 @@ export async function registryRemoveCommand(options: TargetOptions): Promise<voi
       chalk.blue(
         target === "claude"
           ? "\nSelect Claude Code MCP servers to remove from registry:"
-          : "\nSelect Codex CLI MCP servers to remove from registry:",
+          : target === "codex"
+            ? "\nSelect Codex CLI MCP servers to remove from registry:"
+            : "\nSelect OpenCode CLI MCP servers to remove from registry:",
       ),
     );
     console.log(
@@ -66,7 +76,7 @@ export async function registryRemoveCommand(options: TargetOptions): Promise<voi
     }
 
     const confirmed = await confirm({
-      message: `Are you sure you want to remove ${serversToRemove.length} server(s) from the ${target === "claude" ? "Claude" : "Codex"} registry?`,
+      message: `Are you sure you want to remove ${serversToRemove.length} server(s) from the ${target === "claude" ? "Claude" : target === "codex" ? "Codex" : "OpenCode"} registry?`,
       default: false,
     });
 
@@ -83,11 +93,18 @@ export async function registryRemoveCommand(options: TargetOptions): Promise<voi
             `✓ Removed "${serverName}" from Claude registry (~/.mcpkit/mcp-servers.json)`,
           ),
         );
-      } else {
+      } else if (target === "codex") {
         await removeServerFromCodexRegistry(serverName);
         console.log(
           chalk.green(
             `✓ Removed "${serverName}" from Codex registry (~/.mcpkit/codex-mcp-servers.toml)`,
+          ),
+        );
+      } else {
+        await removeServerFromOpenCodeRegistry(serverName);
+        console.log(
+          chalk.green(
+            `✓ Removed "${serverName}" from OpenCode registry (~/.mcpkit/opencode-mcp-servers.json)`,
           ),
         );
       }

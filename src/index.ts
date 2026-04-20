@@ -18,7 +18,8 @@ const program = new Command();
 function withTargetOptions(command: Command): Command {
   return command
     .option("--claude", "Target Claude Code configuration")
-    .option("--codex", "Target Codex CLI configuration");
+    .option("--codex", "Target Codex CLI configuration")
+    .option("--opencode", "Target OpenCode CLI configuration");
 }
 
 program
@@ -30,28 +31,28 @@ program
 withTargetOptions(
   program
     .command("init")
-  .description("Create .mcp.json file with selected servers from registry")
+  .description("Create project MCP config with selected servers from registry")
 ).action(initCommand);
 
 // Edit command
 withTargetOptions(
   program
     .command("edit")
-  .description("Edit or add an MCP server to the project .mcp.json")
+  .description("Edit or add an MCP server to the selected project config")
 ).action(editCommand);
 
 // Add command
 withTargetOptions(
   program
     .command("add")
-  .description("Add servers from registry to .mcp.json")
+  .description("Add servers from registry to the selected project config")
 ).action(addCommand);
 
 // Remove command
 withTargetOptions(
   program
     .command("remove")
-  .description("Remove MCP servers from the project .mcp.json")
+  .description("Remove MCP servers from the selected project config")
 ).action(removeCommand);
 
 // Refresh command

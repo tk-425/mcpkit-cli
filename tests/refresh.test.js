@@ -8,6 +8,10 @@ import {
   writeCodexProjectConfig,
   writeCodexRegistry,
 } from "../dist/utils/codex-config.js";
+import {
+  writeOpenCodeProjectConfig,
+  writeOpenCodeRegistry,
+} from "../dist/utils/opencode-config.js";
 import { writeProjectConfig } from "../dist/utils/project-config.js";
 import { writeRegistry } from "../dist/utils/registry.js";
 
@@ -263,6 +267,70 @@ describe("refresh command", () => {
       await canonicalizePath(path.join(projectDir, ".mcpkit/bin/tavily-mcp")),
     );
     expect(codexContent).toContain(path.join(projectDir, ".mcpkit/bin/zai-mcp-server"));
+  });
+
+  test("updates OpenCode entries automatically when opencode.json exists", async () => {
+    await writeOpenCodeRegistry({
+      mcp: {
+        context7: {
+          type: "remote",
+          url: "https://mcp.context7.com/mcp",
+          headers: {
+            CONTEXT7_API_KEY: "${CONTEXT_7_KEY}",
+          },
+          enabled: true,
+        },
+        convex: {
+          type: "local",
+          command: ["npx", "-y", "convex@latest", "mcp", "start"],
+        },
+      },
+    });
+
+    await writeOpenCodeProjectConfig({
+      model: "anthropic/claude-sonnet-4-5",
+      mcp: {
+        context7: {
+          type: "remote",
+          url: "https://old.example.com/mcp",
+        },
+        convex: {
+          type: "local",
+          command: ["npx", "-y", "convex@latest", "mcp", "start"],
+        },
+      },
+    });
+
+    const output = await captureLogs(async () => {
+      await refreshCommand({});
+    });
+
+    const config = JSON.parse(
+      await fs.readFile(path.join(projectDir, "opencode.json"), "utf-8"),
+    );
+
+    expect(config.model).toBe("anthropic/claude-sonnet-4-5");
+    expect(config.mcp.context7).toEqual({
+      type: "local",
+      command: [
+        await canonicalizePath(path.join(projectDir, ".mcpkit/bin/context7")),
+      ],
+      enabled: true,
+    });
+    expect(config.mcp.convex).toEqual({
+      type: "local",
+      command: ["npx", "-y", "convex@latest", "mcp", "start"],
+    });
+    await expect(
+      fs.access(path.join(projectDir, ".mcpkit/bin/context7")),
+    ).resolves.toBeUndefined();
+    const loadEnvContent = await fs.readFile(
+      path.join(projectDir, ".mcpkit/bin/load-env"),
+      "utf-8",
+    );
+    expect(loadEnvContent).toContain("CONTEXT_7_KEY");
+    expect(output).toContain('Refreshed "context7" with a project-local wrapper.');
+    expect(output).toContain('Refreshed "convex" directly from the registry.');
   });
 
   test("refresh derives load-env from wrapped servers in the project", async () => {

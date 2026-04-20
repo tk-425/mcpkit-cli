@@ -29,6 +29,7 @@ export async function resolveSingleTarget(
     choices: [
       { name: "Claude Code", value: "claude" },
       { name: "Codex CLI", value: "codex" },
+      { name: "OpenCode CLI", value: "opencode" },
     ],
   });
 }

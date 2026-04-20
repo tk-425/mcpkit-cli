@@ -1,14 +1,14 @@
 # mcpkit
 
-**MCP Server Configuration Manager** - A CLI tool to manage project-scoped MCP server configuration for both Claude Code and Codex CLI.
+**MCP Server Configuration Manager** - A CLI tool to manage project-scoped MCP server configuration for Claude Code, Codex CLI, and OpenCode CLI.
 
 ## Features
 
-- Interactive target selection for Claude Code, Codex CLI, or both
-- Separate native registries for Claude JSON and Codex TOML
-- Project-level management for `.mcp.json` and `.codex/config.toml`
+- Interactive target selection for Claude Code, Codex CLI, OpenCode CLI, or any combination
+- Separate native registries for Claude JSON, Codex TOML, and OpenCode JSON
+- Project-level management for `.mcp.json`, `.codex/config.toml`, and `opencode.json`
 - Optional project-local wrapper emission under `.mcpkit/bin/` for servers that need deterministic env loading
-- Target flags for explicit workflows: `--claude` and `--codex`
+- Target flags for explicit workflows: `--claude`, `--codex`, and `--opencode`
 - Smart validation for both JSON and TOML MCP server definitions
 - Support for both stdio and streamable HTTP MCP servers
 
@@ -22,6 +22,7 @@ Current behavior:
 - if a selected server uses `${VAR}` in an easy stdio launcher shape, `mcpkit` wraps it automatically under `.mcpkit/bin/`
 - if a selected server uses `${VAR}` in a supported remote/http auth shape, `mcpkit` converts it into a local `supergateway` launcher and wraps that launcher under `.mcpkit/bin/`
 - if a selected server uses `${VAR}` in a remote/http shape outside that first-pass support boundary, `mcpkit` warns and skips it instead of emitting raw interpolation into project config
+- OpenCode follows the same wrapper policy: supported env-interpolated remote headers and local command env interpolation are emitted through `.mcpkit/bin/*`; direct OpenCode servers remain direct
 
 Rule of thumb:
 
@@ -34,6 +35,7 @@ When wrapper-backed emission is used:
 
 - Claude still receives native `.mcp.json`
 - Codex still receives native `.codex/config.toml`
+- OpenCode still receives native `opencode.json`
 - the emitted `command` points at a generated wrapper under `.mcpkit/bin/`
 
 Generated runtime layout:
@@ -43,6 +45,7 @@ Generated runtime layout:
   .mcp.json
   .codex/
     config.toml
+  opencode.json
   .mcpkit/
     bin/
       load-env
@@ -174,7 +177,7 @@ mcpkit --version
 
 ## Command Model
 
-`mcpkit` supports two target platforms:
+`mcpkit` supports three target platforms:
 
 - **Claude Code**
   - Registry: `~/.mcpkit/mcp-servers.json`
@@ -182,17 +185,21 @@ mcpkit --version
 - **Codex CLI**
   - Registry: `~/.mcpkit/codex-mcp-servers.toml`
   - Project config: `.codex/config.toml`
+- **OpenCode CLI**
+  - Registry: `~/.mcpkit/opencode-mcp-servers.json`
+  - Project config: `opencode.json`
 
 Mutating commands support:
 
 - `--claude` for Claude only
 - `--codex` for Codex only
+- `--opencode` for OpenCode only
 - no flag: interactive target selection
 
 Read-only list commands support:
 
-- `mcpkit list` shows both project targets automatically
-- `mcpkit registry list` shows both registries automatically
+- `mcpkit list` shows all project targets automatically
+- `mcpkit registry list` shows all registries automatically
 
 ## Quick Start
 
@@ -227,6 +234,24 @@ command = "npx"
 args = ["-y", "@upstash/context7-mcp@latest"]
 ```
 
+OpenCode registry entry:
+
+```bash
+mcpkit registry add --opencode
+```
+
+Example input:
+
+```json
+"context7": {
+  "type": "remote",
+  "url": "https://mcp.context7.com/mcp",
+  "headers": {
+    "CONTEXT7_API_KEY": "${CONTEXT_7_KEY}"
+  }
+}
+```
+
 ### 2. View your registries
 
 ```bash
@@ -238,6 +263,7 @@ Filter to one target:
 ```bash
 mcpkit registry list --claude
 mcpkit registry list --codex
+mcpkit registry list --opencode
 ```
 
 ### 3. Initialize a project
@@ -252,12 +278,14 @@ This prompts you to choose:
 
 - Claude Code
 - Codex CLI
-- or both
+- OpenCode CLI
+- or any combination
 
-If you choose both, `mcpkit` will:
+If you choose all targets, `mcpkit` will:
 
 1. prompt for Claude Code servers and write `.mcp.json`
 2. prompt for Codex CLI servers and write `.codex/config.toml`
+3. prompt for OpenCode CLI servers and write `opencode.json`
 
 ### 4. View project servers
 
@@ -270,6 +298,7 @@ Filter to one target:
 ```bash
 mcpkit list --claude
 mcpkit list --codex
+mcpkit list --opencode
 ```
 
 ## Commands
@@ -280,19 +309,21 @@ These commands operate on project-scoped files in the current directory.
 
 #### `mcpkit init`
 
-Create project MCP config for one or both targets.
+Create project MCP config for one or more targets.
 
 ```bash
 mcpkit init
 mcpkit init --claude
 mcpkit init --codex
+mcpkit init --opencode
 ```
 
 Behavior:
 
-- no flags: prompt for Claude, Codex, or both
+- no flags: prompt for Claude, Codex, OpenCode, or any combination
 - `--claude`: create or update `.mcp.json`
 - `--codex`: create or update `.codex/config.toml`
+- `--opencode`: create or update `opencode.json`
 
 #### `mcpkit add`
 
@@ -302,6 +333,7 @@ Add servers from the selected registry into the matching project config.
 mcpkit add
 mcpkit add --claude
 mcpkit add --codex
+mcpkit add --opencode
 ```
 
 #### `mcpkit refresh`
@@ -312,13 +344,14 @@ Refresh existing project MCP server entries from the matching registry using the
 mcpkit refresh
 mcpkit refresh --claude
 mcpkit refresh --codex
+mcpkit refresh --opencode
 ```
 
 Behavior:
 
 - only touches the current directory
 - updates only targets whose project config already exists
-- if neither `.mcp.json` nor `.codex/config.toml` exists, tells you to run `mcpkit init` first
+- if none of `.mcp.json`, `.codex/config.toml`, or `opencode.json` exists, tells you to run `mcpkit init` first
 - refreshes only server names already present in the project config
 - preserves project entries that are missing from the registry and reports them at the end
 - preserves project entries that still cannot be refreshed safely and reports them at the end
@@ -333,12 +366,14 @@ Add or edit a single server directly in the selected project config.
 mcpkit edit
 mcpkit edit --claude
 mcpkit edit --codex
+mcpkit edit --opencode
 ```
 
 Input format:
 
 - Claude: JSON server definition
 - Codex: TOML `[mcp_servers.<name>]` definition
+- OpenCode: JSON server entry
 
 #### `mcpkit remove`
 
@@ -348,9 +383,10 @@ Remove servers from the selected project config.
 mcpkit remove
 mcpkit remove --claude
 mcpkit remove --codex
+mcpkit remove --opencode
 ```
 
-For wrapper-backed servers, `remove` also deletes the per-server wrapper script when it is no longer referenced by any remaining Claude or Codex project config in the current project.
+For wrapper-backed servers, `remove` also deletes the per-server wrapper script when it is no longer referenced by any remaining Claude, Codex, or OpenCode project config in the current project.
 
 #### `mcpkit list`
 
@@ -361,11 +397,12 @@ mcpkit list
 mcpkit list --verbose
 mcpkit list --claude
 mcpkit list --codex
+mcpkit list --opencode
 ```
 
 Behavior:
 
-- no flags: show both targets automatically
+- no flags: show all targets automatically
 - missing config files are shown as `Not configured`
 
 ### Registry Commands
@@ -380,6 +417,7 @@ Add a server to the selected registry.
 mcpkit registry add
 mcpkit registry add --claude
 mcpkit registry add --codex
+mcpkit registry add --opencode
 ```
 
 Behavior:
@@ -387,6 +425,7 @@ Behavior:
 - no flags: prompt for target
 - Claude: expects JSON
 - Codex: expects TOML
+- OpenCode: expects one JSON server entry
 
 Wrapper generation is internal to `mcpkit`. Registry entries remain plain native MCP config, and `mcpkit` decides at project-emission time whether a selected server can be wrapped safely.
 
@@ -398,6 +437,7 @@ Remove servers from the selected registry.
 mcpkit registry remove
 mcpkit registry remove --claude
 mcpkit registry remove --codex
+mcpkit registry remove --opencode
 ```
 
 #### `mcpkit registry list`
@@ -409,6 +449,7 @@ mcpkit registry list
 mcpkit registry list --verbose
 mcpkit registry list --claude
 mcpkit registry list --codex
+mcpkit registry list --opencode
 ```
 
 ## Implementation Docs
@@ -418,14 +459,16 @@ mcpkit registry list --codex
 
 Behavior:
 
-- no flags: show both registries automatically
+- no flags: show all registries automatically
 
 ## File Locations
 
 - Claude registry: `~/.mcpkit/mcp-servers.json`
 - Codex registry: `~/.mcpkit/codex-mcp-servers.toml`
+- OpenCode registry: `~/.mcpkit/opencode-mcp-servers.json`
 - Claude project config: `.mcp.json`
 - Codex project config: `.codex/config.toml`
+- OpenCode project config: `opencode.json`
 
 ## Configuration Formats
 
@@ -487,21 +530,81 @@ args = ["-y", "@upstash/context7-mcp@latest"]
 
 `mcpkit` preserves unrelated existing Codex settings in `.codex/config.toml` and updates only the `mcp_servers` section.
 
+### OpenCode Registry Format
+
+File: `~/.mcpkit/opencode-mcp-servers.json`
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp"
+    },
+    "everything": {
+      "type": "local",
+      "command": ["npx", "-y", "@modelcontextprotocol/server-everything"],
+      "environment": {
+        "API_KEY": "{env:API_KEY}"
+      }
+    }
+  }
+}
+```
+
+### OpenCode Project Format
+
+File: `opencode.json`
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp"
+    }
+  }
+}
+```
+
+`mcpkit` preserves unrelated existing OpenCode settings in `opencode.json` and updates only the `mcp` section.
+
+When an eligible OpenCode entry is wrapper-backed, it is stored as a local OpenCode command entry:
+
+```json
+{
+  "type": "local",
+  "command": [".mcpkit/bin/context7"]
+}
+```
+
+Existing eligible direct OpenCode entries become wrapper-backed after you run `mcpkit refresh --opencode` or `mcpkit refresh`.
+
+First-pass OpenCode support targets `opencode.json`; `opencode.jsonc` is not modified.
+
 ## Common Workflows
 
-### Set up both Claude and Codex for a new project
+### Set up Claude, Codex, and OpenCode for a new project
 
 ```bash
 cd my-project
 mcpkit init
 ```
 
-Choose both targets when prompted, then select servers for each target in sequence.
+Choose the targets when prompted, then select servers for each target in sequence.
 
 ### Add only a Codex MCP server to an existing project
 
 ```bash
 mcpkit add --codex
+```
+
+### Add only an OpenCode MCP server to an existing project
+
+```bash
+mcpkit add --opencode
 ```
 
 ### Refresh an older project to current wrapper behavior
@@ -520,7 +623,7 @@ It also regenerates the current project's `.mcpkit/bin/load-env` from the union 
 mcpkit edit --claude
 ```
 
-### Show all configured servers for both targets
+### Show all configured servers for all targets
 
 ```bash
 mcpkit list
@@ -530,6 +633,12 @@ mcpkit list
 
 ```bash
 mcpkit registry list --codex --verbose
+```
+
+### Show verbose OpenCode registry details
+
+```bash
+mcpkit registry list --opencode --verbose
 ```
 
 ## Troubleshooting
@@ -562,6 +671,20 @@ or:
 mcpkit init
 ```
 
+### "No opencode.json found in current directory"
+
+Run:
+
+```bash
+mcpkit init --opencode
+```
+
+or:
+
+```bash
+mcpkit init
+```
+
 ### "No MCP servers in registry"
 
 Add servers first:
@@ -569,6 +692,7 @@ Add servers first:
 ```bash
 mcpkit registry add --claude
 mcpkit registry add --codex
+mcpkit registry add --opencode
 ```
 
 ### Invalid JSON or TOML input
@@ -587,6 +711,13 @@ Common TOML issues:
 - invalid array syntax
 - malformed quotes
 
+Common OpenCode JSON issues:
+
+- pasting a full `opencode.json` wrapper into `mcpkit registry add --opencode`
+- more than one top-level server entry
+- local server `command` is not an array
+- remote server is missing `url`
+
 ### Permission errors
 
 Check registry file and directory permissions:
@@ -594,6 +725,7 @@ Check registry file and directory permissions:
 ```bash
 chmod 644 ~/.mcpkit/mcp-servers.json
 chmod 644 ~/.mcpkit/codex-mcp-servers.toml
+chmod 644 ~/.mcpkit/opencode-mcp-servers.json
 chmod 755 ~/.mcpkit
 ```
 

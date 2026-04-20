@@ -23,6 +23,13 @@ const EDIT_PROJECT_TARGET_COPY: Record<McpTarget, EditProjectTargetCopy> = {
     instruction: "  1. Edit the TOML configuration",
     successMessage: (name) => `✓ Updated "${name}" in .codex/config.toml`,
   },
+  opencode: {
+    selectionMessage: "Choose an OpenCode CLI server to edit:",
+    emptyMessage: "No OpenCode CLI MCP servers found in opencode.json",
+    inputMessage: "Edit OpenCode server entry (save and exit to confirm):",
+    instruction: "  1. Edit the OpenCode JSON server entry",
+    successMessage: (name) => `✓ Updated "${name}" in opencode.json`,
+  },
 };
 
 export function getEditProjectTargetCopy(

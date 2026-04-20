@@ -1,10 +1,11 @@
-export const TARGETS = ['claude', 'codex'] as const;
+export const TARGETS = ['claude', 'codex', 'opencode'] as const;
 
 export type McpTarget = typeof TARGETS[number];
 
 export interface TargetOptions {
   claude?: boolean;
   codex?: boolean;
+  opencode?: boolean;
 }
 
 /**
@@ -20,6 +21,10 @@ export function getExplicitTargets(options: TargetOptions): McpTarget[] {
 
   if (options.codex) {
     targets.push('codex');
+  }
+
+  if (options.opencode) {
+    targets.push('opencode');
   }
 
   return targets;

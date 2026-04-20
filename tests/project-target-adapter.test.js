@@ -37,4 +37,18 @@ describe("project target adapter", () => {
     expect(serialized).toContain('command = "npx"');
     expect("messages" in adapter).toBe(false);
   });
+
+  test("OpenCode adapter serializes a single server as native JSON", () => {
+    const adapter = getProjectTargetAdapter("opencode");
+    const serialized = adapter.serializeServerForEdit("context7", {
+      type: "remote",
+      url: "https://mcp.context7.com/mcp",
+    });
+
+    expect(serialized).toContain('"context7"');
+    expect(serialized).toContain('"url": "https://mcp.context7.com/mcp"');
+    expect(serialized).not.toContain('"$schema"');
+    expect(serialized).not.toContain('"mcp"');
+    expect("messages" in adapter).toBe(false);
+  });
 });

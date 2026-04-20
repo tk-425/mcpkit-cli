@@ -1,7 +1,7 @@
 {
   "name": "mcpkit",
-  "version": "0.1.6",
-  "description": "MCP Server Configuration Manager - CLI tool to manage .mcp.json files",
+  "version": "0.1.8",
+  "description": "MCP Server Configuration Manager - CLI tool to manage Claude, Codex, and OpenCode MCP config",
   "main": "dist/index.js",
   "bin": {
     "mcpkit": "./dist/index.js"

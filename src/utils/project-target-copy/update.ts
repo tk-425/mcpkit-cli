@@ -11,6 +11,9 @@ const UPDATE_PROJECT_TARGET_COPY: Record<McpTarget, UpdateProjectTargetCopy> = {
   codex: {
     summaryLabel: "Codex CLI",
   },
+  opencode: {
+    summaryLabel: "OpenCode CLI",
+  },
 };
 
 export function getUpdateProjectTargetCopy(

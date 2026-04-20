@@ -5,6 +5,11 @@ import {
   codexProjectConfigExists,
   ensureCodexMcpServers,
 } from '../utils/codex-config.js';
+import {
+  ensureOpenCodeMcpServers,
+  openCodeProjectConfigExists,
+  readOpenCodeProjectConfig,
+} from '../utils/opencode-config.js';
 import { getExplicitTargets, type TargetOptions } from '../utils/targets.js';
 
 interface ListCommandOptions extends TargetOptions {
@@ -79,6 +84,39 @@ function renderCodexSection(
   console.log(chalk.gray(`Total: ${serverNames.length} server${serverNames.length === 1 ? '' : 's'}`));
 }
 
+function renderOpenCodeSection(
+  serverNames: string[],
+  projectConfig?: Awaited<ReturnType<typeof readOpenCodeProjectConfig>>,
+  verbose?: boolean,
+): void {
+  console.log(chalk.blue('OpenCode CLI Project MCP Servers (opencode.json):'));
+
+  if (!projectConfig) {
+    console.log(chalk.yellow('  Not configured'));
+    return;
+  }
+
+  if (serverNames.length === 0) {
+    console.log(chalk.yellow('  No MCP servers configured'));
+    return;
+  }
+
+  const servers = ensureOpenCodeMcpServers(projectConfig);
+
+  if (verbose) {
+    serverNames.forEach((name) => {
+      console.log(chalk.green(`\n  • ${name}`));
+      console.log(chalk.gray(`    ${renderJsonConfig(servers[name])}`));
+    });
+  } else {
+    serverNames.forEach((name) => {
+      console.log(chalk.green(`  • ${name}`));
+    });
+  }
+
+  console.log(chalk.gray(`Total: ${serverNames.length} server${serverNames.length === 1 ? '' : 's'}`));
+}
+
 /**
  * Command handler for 'mcpkit list'
  */
@@ -87,6 +125,7 @@ export async function listCommand(options: ListCommandOptions): Promise<void> {
     const explicitTargets = getExplicitTargets(options);
     const showClaude = explicitTargets.length === 0 || explicitTargets.includes('claude');
     const showCodex = explicitTargets.length === 0 || explicitTargets.includes('codex');
+    const showOpenCode = explicitTargets.length === 0 || explicitTargets.includes('opencode');
 
     if (showClaude) {
       if (projectConfigExists()) {
@@ -115,6 +154,23 @@ export async function listCommand(options: ListCommandOptions): Promise<void> {
         );
       } else {
         renderCodexSection([], undefined, options.verbose);
+      }
+    }
+
+    if ((showClaude || showCodex) && showOpenCode) {
+      console.log();
+    }
+
+    if (showOpenCode) {
+      if (openCodeProjectConfigExists()) {
+        const projectConfig = await readOpenCodeProjectConfig();
+        renderOpenCodeSection(
+          Object.keys(ensureOpenCodeMcpServers(projectConfig)).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })),
+          projectConfig,
+          options.verbose,
+        );
+      } else {
+        renderOpenCodeSection([], undefined, options.verbose);
       }
     }
   } catch (error) {

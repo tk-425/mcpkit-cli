@@ -5,6 +5,7 @@ import path from "path";
 import {
   emitClaudeProjectServer,
   emitCodexProjectServer,
+  emitOpenCodeProjectServer,
 } from "../dist/utils/project-emitter.js";
 
 async function canonicalizePath(targetPath) {
@@ -157,5 +158,113 @@ describe("project emitter", () => {
     expect(result.skipped).toBe(true);
     expect(result.config).toBeUndefined();
     expect(result.reason).toContain("not supported for wrapper conversion");
+  });
+
+  test("rewrites supported OpenCode remote/http header interpolation to a local supergateway wrapper", async () => {
+    const result = await emitOpenCodeProjectServer("context7", {
+      type: "remote",
+      url: "https://mcp.context7.com/mcp",
+      headers: {
+        CONTEXT7_API_KEY: "${CONTEXT_7_KEY}",
+      },
+    });
+
+    expect(result.usedWrapper).toBe(true);
+    expect(result.skipped).toBe(false);
+    expect(result.config).toEqual({
+      type: "local",
+      command: [
+        await canonicalizePath(path.join(tempDir, ".mcpkit/bin/context7")),
+      ],
+    });
+
+    const wrapperContent = await fs.readFile(
+      path.join(tempDir, ".mcpkit/bin/context7"),
+      "utf-8",
+    );
+    expect(wrapperContent).toContain('"supergateway"');
+    expect(wrapperContent).toContain('"--streamableHttp"');
+    expect(wrapperContent).toContain('"https://mcp.context7.com/mcp"');
+    expect(wrapperContent).toContain('"CONTEXT7_API_KEY: ${CONTEXT_7_KEY}"');
+  });
+
+  test("keeps direct OpenCode local server entries unchanged", async () => {
+    const config = {
+      type: "local",
+      command: ["npx", "-y", "convex@latest", "mcp", "start"],
+    };
+
+    const result = await emitOpenCodeProjectServer("convex", config);
+
+    expect(result.usedWrapper).toBe(false);
+    expect(result.skipped).toBe(false);
+    expect(result.config).toEqual(config);
+  });
+
+  test("rewrites OpenCode local command entries with environment interpolation", async () => {
+    const result = await emitOpenCodeProjectServer("example", {
+      type: "local",
+      command: ["npx", "-y", "example-mcp"],
+      environment: {
+        API_KEY: "${API_KEY}",
+      },
+    });
+
+    expect(result.usedWrapper).toBe(true);
+    expect(result.skipped).toBe(false);
+    expect(result.config).toEqual({
+      type: "local",
+      command: [
+        await canonicalizePath(path.join(tempDir, ".mcpkit/bin/example")),
+      ],
+    });
+
+    const wrapperContent = await fs.readFile(
+      path.join(tempDir, ".mcpkit/bin/example"),
+      "utf-8",
+    );
+    expect(wrapperContent).toContain("example-mcp");
+  });
+
+  test("skips unsupported OpenCode remote/http env injection shapes", async () => {
+    const result = await emitOpenCodeProjectServer("remote-api", {
+      type: "remote",
+      url: "https://example.com/mcp",
+      oauth: {
+        token: "${API_KEY}",
+      },
+    });
+
+    expect(result.usedWrapper).toBe(false);
+    expect(result.skipped).toBe(true);
+    expect(result.config).toBeUndefined();
+    expect(result.reason).toContain(
+      "OpenCode CLI server uses env interpolation in a remote/http config",
+    );
+  });
+
+  test("preserves OpenCode native metadata when wrapping", async () => {
+    const result = await emitOpenCodeProjectServer("context7", {
+      type: "remote",
+      url: "https://mcp.context7.com/mcp",
+      headers: {
+        CONTEXT7_API_KEY: "${CONTEXT_7_KEY}",
+      },
+      enabled: false,
+      timeout: 120,
+      customField: "custom-value",
+    });
+
+    expect(result.usedWrapper).toBe(true);
+    expect(result.skipped).toBe(false);
+    expect(result.config.type).toBe("local");
+    expect(result.config.command).toEqual([
+      await canonicalizePath(path.join(tempDir, ".mcpkit/bin/context7")),
+    ]);
+    expect(result.config.enabled).toBe(false);
+    expect(result.config.timeout).toBe(120);
+    expect(result.config.customField).toBe("custom-value");
+    expect(result.config.url).toBeUndefined();
+    expect(result.config.headers).toBeUndefined();
   });
 });

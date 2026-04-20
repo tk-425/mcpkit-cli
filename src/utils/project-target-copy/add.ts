@@ -28,6 +28,15 @@ const ADD_PROJECT_TARGET_COPY: Record<McpTarget, AddProjectTargetCopy> = {
     successMessage: (count) =>
       `\n✓ Added ${count} Codex server${count === 1 ? "" : "s"} to .codex/config.toml`,
   },
+  opencode: {
+    selectionMessage: "Select OpenCode CLI MCP servers to add to opencode.json:",
+    cancelledMessage: "No OpenCode CLI servers selected. Cancelled.",
+    noAvailableMessage: "No new OpenCode CLI servers available to add.",
+    noChangesMessage: "No OpenCode CLI servers were added.",
+    skippedServersHeading: "Skipped OpenCode CLI servers:",
+    successMessage: (count) =>
+      `\n✓ Added ${count} OpenCode server${count === 1 ? "" : "s"} to opencode.json`,
+  },
 };
 
 export function getAddProjectTargetCopy(target: McpTarget): AddProjectTargetCopy {

@@ -8,7 +8,15 @@ import {
   addServerToCodexRegistry,
   serverExistsInCodexRegistry,
 } from "../utils/codex-config.js";
-import { parseCodexServerInput, parseServerInput } from "../utils/validation.js";
+import {
+  addServerToOpenCodeRegistry,
+  serverExistsInOpenCodeRegistry,
+} from "../utils/opencode-config.js";
+import {
+  parseCodexServerInput,
+  parseOpenCodeServerInput,
+  parseServerInput,
+} from "../utils/validation.js";
 import type { TargetOptions } from "../utils/targets.js";
 import { resolveSingleRegistryTarget } from "./registry-targets.js";
 
@@ -31,7 +39,9 @@ export async function registryAddCommand(options: TargetOptions): Promise<void> 
       chalk.gray(
         target === "claude"
           ? "  1. Paste your multi-line JSON configuration"
-          : "  1. Paste your single Codex TOML [mcp_servers.<name>] configuration",
+          : target === "codex"
+            ? "  1. Paste your single Codex TOML [mcp_servers.<name>] configuration"
+            : "  1. Paste your single OpenCode JSON server entry",
       ),
     );
     console.log(
@@ -50,10 +60,18 @@ export async function registryAddCommand(options: TargetOptions): Promise<void> 
       console.log(chalk.gray('  "context7": {'));
       console.log(chalk.gray('    "url": "https://api.context7.ai/mcp"'));
       console.log(chalk.gray("  }"));
-    } else {
+    } else if (target === "codex") {
       console.log(chalk.gray("[mcp_servers.context7]"));
       console.log(chalk.gray('command = "npx"'));
       console.log(chalk.gray('args = ["-y", "@upstash/context7-mcp@latest"]'));
+    } else {
+      console.log(chalk.gray('  "context7": {'));
+      console.log(chalk.gray('    "type": "remote",'));
+      console.log(chalk.gray('    "url": "https://mcp.context7.com/mcp",'));
+      console.log(chalk.gray('    "headers": {'));
+      console.log(chalk.gray('      "CONTEXT7_API_KEY": "${CONTEXT_7_KEY}"'));
+      console.log(chalk.gray('    }'));
+      console.log(chalk.gray('  }'));
     }
 
     console.log();
@@ -62,7 +80,9 @@ export async function registryAddCommand(options: TargetOptions): Promise<void> 
       message:
         target === "claude"
           ? "Enter server configuration (paste JSON and save):"
-          : "Enter Codex server configuration (paste TOML and save):",
+          : target === "codex"
+            ? "Enter Codex server configuration (paste TOML and save):"
+            : "Enter OpenCode server configuration (paste JSON and save):",
       default: "",
       validate: (value) => {
         if (!value.trim()) {
@@ -71,8 +91,10 @@ export async function registryAddCommand(options: TargetOptions): Promise<void> 
         try {
           if (target === "claude") {
             parseServerInput(value);
-          } else {
+          } else if (target === "codex") {
             parseCodexServerInput(value);
+          } else {
+            parseOpenCodeServerInput(value);
           }
           return true;
         } catch (error) {
@@ -106,12 +128,37 @@ export async function registryAddCommand(options: TargetOptions): Promise<void> 
       return;
     }
 
-    const { name, config } = parseCodexServerInput(pastedInput);
-    const exists = await serverExistsInCodexRegistry(name);
+    if (target === "codex") {
+      const { name, config } = parseCodexServerInput(pastedInput);
+      const exists = await serverExistsInCodexRegistry(name);
+
+      if (exists) {
+        const shouldOverwrite = await confirm({
+          message: `Server "${name}" already exists in Codex registry. Overwrite?`,
+          default: false,
+        });
+
+        if (!shouldOverwrite) {
+          console.log(chalk.yellow("Cancelled."));
+          return;
+        }
+      }
+
+      await addServerToCodexRegistry(name, config);
+      console.log(
+        chalk.green(
+          `✓ Added "${name}" to Codex registry (~/.mcpkit/codex-mcp-servers.toml)`,
+        ),
+      );
+      return;
+    }
+
+    const { name, config } = parseOpenCodeServerInput(pastedInput);
+    const exists = await serverExistsInOpenCodeRegistry(name);
 
     if (exists) {
       const shouldOverwrite = await confirm({
-        message: `Server "${name}" already exists in Codex registry. Overwrite?`,
+        message: `Server "${name}" already exists in OpenCode registry. Overwrite?`,
         default: false,
       });
 
@@ -121,10 +168,10 @@ export async function registryAddCommand(options: TargetOptions): Promise<void> 
       }
     }
 
-    await addServerToCodexRegistry(name, config);
+    await addServerToOpenCodeRegistry(name, config);
     console.log(
       chalk.green(
-        `✓ Added "${name}" to Codex registry (~/.mcpkit/codex-mcp-servers.toml)`,
+        `✓ Added "${name}" to OpenCode registry (~/.mcpkit/opencode-mcp-servers.json)`,
       ),
     );
   } catch (error) {

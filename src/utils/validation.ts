@@ -1,5 +1,6 @@
 import type { ServerConfig } from './registry.js';
 import type { CodexMcpServerConfig } from './codex-config.js';
+import type { OpenCodeMcpServerConfig } from './opencode-config.js';
 import { parseToml } from './toml.js';
 
 /**
@@ -254,6 +255,73 @@ export function validateCodexServerConfig(config: any): { valid: boolean; error?
   return { valid: true };
 }
 
+export function validateOpenCodeServerConfig(config: any): { valid: boolean; error?: string } {
+  if (typeof config !== 'object' || config === null || Array.isArray(config)) {
+    return { valid: false, error: 'Server configuration must be an object' };
+  }
+
+  const serverConfig = config as OpenCodeMcpServerConfig;
+
+  if (serverConfig.type !== 'local' && serverConfig.type !== 'remote') {
+    return {
+      valid: false,
+      error: 'OpenCode server configuration must set "type" to "local" or "remote"',
+    };
+  }
+
+  if (serverConfig.type === 'local') {
+    const result = validateStringArray(serverConfig.command, 'command');
+    if (!result.valid) {
+      return result;
+    }
+
+    if (serverConfig.command!.length === 0) {
+      return { valid: false, error: '"command" array cannot be empty' };
+    }
+  }
+
+  if (serverConfig.type === 'remote' && typeof serverConfig.url !== 'string') {
+    return { valid: false, error: '"url" field must be a string' };
+  }
+
+  if (serverConfig.enabled !== undefined && typeof serverConfig.enabled !== 'boolean') {
+    return { valid: false, error: '"enabled" field must be a boolean' };
+  }
+
+  if (
+    serverConfig.timeout !== undefined &&
+    (typeof serverConfig.timeout !== 'number' || !Number.isFinite(serverConfig.timeout))
+  ) {
+    return { valid: false, error: '"timeout" field must be a number' };
+  }
+
+  if (serverConfig.environment !== undefined) {
+    const result = validateStringRecord(serverConfig.environment, 'environment');
+    if (!result.valid) {
+      return result;
+    }
+  }
+
+  if (serverConfig.headers !== undefined) {
+    const result = validateStringRecord(serverConfig.headers, 'headers');
+    if (!result.valid) {
+      return result;
+    }
+  }
+
+  if (
+    serverConfig.oauth !== undefined &&
+    serverConfig.oauth !== false &&
+    (typeof serverConfig.oauth !== 'object' ||
+      serverConfig.oauth === null ||
+      Array.isArray(serverConfig.oauth))
+  ) {
+    return { valid: false, error: '"oauth" field must be an object or false' };
+  }
+
+  return { valid: true };
+}
+
 /**
  * Normalize server configuration to convert array command format to standard format
  * Converts: { command: ["npx", "-y", "pkg"] }
@@ -405,4 +473,65 @@ export function parseCodexServerInput(
   }
 
   return { name, config };
+}
+
+export function parseOpenCodeServerInput(
+  input: string,
+): { name: string; config: OpenCodeMcpServerConfig } {
+  let cleaned = input.trim();
+
+  if (!cleaned) {
+    throw new Error('Input cannot be empty');
+  }
+
+  cleaned = cleaned.replace(/,\s*$/, '');
+
+  if (!cleaned.startsWith('{')) {
+    cleaned = `{${cleaned}}`;
+  }
+
+  const parseResult = parseJSON(cleaned);
+  if (!parseResult.success) {
+    throw new Error(parseResult.error);
+  }
+
+  const parsed = parseResult.data;
+
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    throw new Error('OpenCode input must be a JSON object');
+  }
+
+  if ('$schema' in parsed) {
+    throw new Error('OpenCode input must be a single server entry, not a full opencode.json config');
+  }
+
+  const entries = Object.entries(parsed);
+
+  if (entries.length === 0) {
+    throw new Error('No OpenCode server configuration found in input');
+  }
+
+  if (entries.length > 1) {
+    throw new Error('Please provide only one OpenCode server configuration at a time');
+  }
+
+  const [name, config] = entries[0];
+
+  if (name === 'mcp' && !validateOpenCodeServerConfig(config).valid) {
+    throw new Error('OpenCode input must be a single server entry, not a full opencode.json config');
+  }
+
+  const nameValidation = validateServerName(name);
+
+  if (!nameValidation.valid) {
+    throw new Error(nameValidation.error);
+  }
+
+  const configValidation = validateOpenCodeServerConfig(config);
+
+  if (!configValidation.valid) {
+    throw new Error(configValidation.error);
+  }
+
+  return { name, config: config as OpenCodeMcpServerConfig };
 }

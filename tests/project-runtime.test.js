@@ -10,6 +10,7 @@ import {
   ensureServerWrapper,
   syncLoadEnvWithReferencedWrappers,
 } from "../dist/utils/project-runtime.js";
+import { writeOpenCodeProjectConfig } from "../dist/utils/opencode-config.js";
 
 async function canonicalizePath(targetPath) {
   try {
@@ -184,6 +185,18 @@ command = "${path.join(tempDir, ".mcpkit/bin/context7-mcp")}"
 `,
       "utf-8",
     );
+    await writeOpenCodeProjectConfig({
+      mcp: {
+        context7: {
+          type: "local",
+          command: [path.join(tempDir, ".mcpkit/bin/context7")],
+        },
+        convex: {
+          type: "local",
+          command: ["npx", "-y", "convex@latest", "mcp", "start"],
+        },
+      },
+    });
 
     const referencedPaths = await collectReferencedWrapperPaths();
 
@@ -193,6 +206,38 @@ command = "${path.join(tempDir, ".mcpkit/bin/context7-mcp")}"
     expect(
       referencedPaths.has(await canonicalizePath(path.join(tempDir, ".mcpkit/bin/context7-mcp"))),
     ).toBe(true);
+    expect(
+      referencedPaths.has(await canonicalizePath(path.join(tempDir, ".mcpkit/bin/context7"))),
+    ).toBe(true);
+    expect(referencedPaths.has(await canonicalizePath("npx"))).toBe(false);
+  });
+
+  test("syncs load-env from OpenCode-only referenced wrappers", async () => {
+    const result = await ensureServerWrapper({
+      scriptName: "context7",
+      requiredEnv: ["CONTEXT_7_KEY"],
+      exec: {
+        command: "npx",
+        args: ["-y", "supergateway"],
+      },
+    });
+
+    await writeOpenCodeProjectConfig({
+      mcp: {
+        context7: {
+          type: "local",
+          command: [result.wrapperPath],
+        },
+      },
+    });
+
+    await syncLoadEnvWithReferencedWrappers();
+
+    const loadEnvContent = await fs.readFile(
+      path.join(tempDir, ".mcpkit/bin/load-env"),
+      "utf-8",
+    );
+    expect(loadEnvContent).toContain("CONTEXT_7_KEY");
   });
 
   test("removes unused wrapper and load-env files", async () => {

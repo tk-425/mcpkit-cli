@@ -17,4 +17,17 @@ describe("targets utility", () => {
       "codex",
     ]);
   });
+
+  test("returns OpenCode when only --opencode is set", () => {
+    expect(getExplicitTargets({ opencode: true })).toEqual(["opencode"]);
+    expect(hasExplicitTargetSelection({ opencode: true })).toBe(true);
+  });
+
+  test("returns all targets in stable order when all flags are set", () => {
+    expect(getExplicitTargets({ claude: true, codex: true, opencode: true })).toEqual([
+      "claude",
+      "codex",
+      "opencode",
+    ]);
+  });
 });

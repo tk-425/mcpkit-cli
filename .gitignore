@@ -29,6 +29,7 @@ docs/
 .qwen/
 .opencode/
 .mcp.json
+.opencode.json
 GEMINI.md
 QWEN.md
 AGENTS.md
@@ -37,8 +38,6 @@ CLAUDE.md
 
 # build
 mcpkit
-# vmem
-.vmem/
 
 .codegraph/
 .docs/
@@ -47,3 +46,5 @@ mcpkit
 # mcpkit generated local MCP wrappers
 .mcpkit/
 # END MCPKIT
+
+.devflow/

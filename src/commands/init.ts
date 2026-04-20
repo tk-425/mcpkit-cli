@@ -140,12 +140,7 @@ async function runInitFlow<TConfig, TRegistry, TServer>(
 }
 
 async function runInitFlowForTarget(target: McpTarget): Promise<void> {
-  if (target === "claude") {
-    await runInitFlow(getProjectTargetAdapter("claude"));
-    return;
-  }
-
-  await runInitFlow(getProjectTargetAdapter("codex"));
+  await runInitFlow(getProjectTargetAdapter(target) as ProjectTargetAdapter<any, any, any>);
 }
 
 /**

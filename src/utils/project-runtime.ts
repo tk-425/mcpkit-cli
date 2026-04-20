@@ -16,6 +16,10 @@ import {
   readProjectConfig,
 } from './project-config.js';
 import {
+  openCodeProjectConfigExists,
+  readOpenCodeProjectConfig,
+} from './opencode-config.js';
+import {
   WRAPPER_LOAD_ENV_METADATA_PREFIX,
   buildLoadEnvScript,
   buildWrapperScript,
@@ -149,6 +153,22 @@ export async function collectReferencedWrapperPaths(): Promise<Set<string>> {
     for (const config of Object.values(codexConfig.mcp_servers ?? {})) {
       if (typeof config.command === 'string') {
         const resolved = await canonicalizePath(config.command);
+        if (resolved.startsWith(runtimeBinDir + '/') || resolved === runtimeBinDir) {
+          referencedPaths.add(resolved);
+        }
+      }
+    }
+  }
+
+  if (openCodeProjectConfigExists()) {
+    const openCodeConfig = await readOpenCodeProjectConfig();
+    for (const config of Object.values(openCodeConfig.mcp ?? {})) {
+      if (
+        config.type === 'local' &&
+        Array.isArray(config.command) &&
+        typeof config.command[0] === 'string'
+      ) {
+        const resolved = await canonicalizePath(config.command[0]);
         if (resolved.startsWith(runtimeBinDir + '/') || resolved === runtimeBinDir) {
           referencedPaths.add(resolved);
         }
