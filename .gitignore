@@ -37,6 +37,7 @@ GEMINI.md
 QWEN.md
 AGENTS.md
 CLAUDE.md
+CONTEXT.md
 
 
 # build
@@ -51,3 +52,5 @@ mcpkit
 # END MCPKIT
 
 .devflow/
+
+.devflow-archive/
