@@ -30,6 +30,8 @@ export async function resolveSingleTarget(
       { name: "Claude Code", value: "claude" },
       { name: "Codex CLI", value: "codex" },
       { name: "OpenCode CLI", value: "opencode" },
+      { name: "Gemini CLI", value: "gemini" },
+      { name: "Cursor", value: "cursor" },
     ],
   });
 }

@@ -1,10 +1,12 @@
 import type { CodexMcpServerConfig } from './codex-config.js';
 import type { OpenCodeMcpServerConfig } from './opencode-config.js';
-import { hasInterpolatedEnv, findInterpolatedEnvNames, isPureEnvReference } from './interpolation.js';
+import type { GeminiMcpServerConfig } from './gemini-config.js';
+import type { CursorMcpServerConfig } from './cursor-config.js';
+import { hasInterpolatedEnv, findInterpolatedEnvNames, isPureEnvReference, normalizeEnvSyntax } from './interpolation.js';
 import type { ServerConfig } from './registry.js';
 import type { WrapperConfig } from './wrapper-types.js';
 
-type NativeConfig = ServerConfig | CodexMcpServerConfig | OpenCodeMcpServerConfig;
+type NativeConfig = ServerConfig | CodexMcpServerConfig | OpenCodeMcpServerConfig | GeminiMcpServerConfig | CursorMcpServerConfig;
 
 export interface WrapperResolution {
   kind: 'direct' | 'wrap' | 'skip';
@@ -113,7 +115,7 @@ function buildRemoteHttpWrapperConfig(
 
   const headerArgs = Object.entries(headers).flatMap(([name, value]) => [
     '--header',
-    `${name}: ${value}`,
+    `${name}: ${normalizeEnvSyntax(value)}`,
   ]);
 
   return {
@@ -152,7 +154,7 @@ function buildGenericWrapperConfig(
     if (referencedEnv) {
       forwardedEnv[key] = referencedEnv;
     } else if (hasInterpolatedEnv(value)) {
-      templatedEnv[key] = value;
+      templatedEnv[key] = normalizeEnvSyntax(value);
     } else {
       staticEnv[key] = value;
     }
@@ -178,7 +180,7 @@ function buildGenericWrapperConfig(
 function resolveCommon(
   serverName: string,
   config: NativeConfig,
-  targetLabel: 'Claude Code' | 'Codex CLI' | 'OpenCode CLI',
+  targetLabel: 'Claude Code' | 'Codex CLI' | 'OpenCode CLI' | 'Gemini CLI' | 'Cursor',
 ): WrapperResolution {
   const normalized = normalizeCommand(config);
   const usesInterpolation = hasInterpolatedEnv(config);
@@ -248,4 +250,18 @@ export function resolveOpenCodeWrapperConfig(
   config: OpenCodeMcpServerConfig,
 ): WrapperResolution {
   return resolveCommon(serverName, config, 'OpenCode CLI');
+}
+
+export function resolveGeminiWrapperConfig(
+  serverName: string,
+  config: GeminiMcpServerConfig,
+): WrapperResolution {
+  return resolveCommon(serverName, config, 'Gemini CLI');
+}
+
+export function resolveCursorWrapperConfig(
+  serverName: string,
+  config: CursorMcpServerConfig,
+): WrapperResolution {
+  return resolveCommon(serverName, config, 'Cursor');
 }

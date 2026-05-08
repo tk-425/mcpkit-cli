@@ -13,9 +13,19 @@ import {
   serverExistsInOpenCodeRegistry,
 } from "../utils/opencode-config.js";
 import {
+  addServerToGeminiRegistry,
+  serverExistsInGeminiRegistry,
+} from "../utils/gemini-config.js";
+import {
+  addServerToCursorRegistry,
+  serverExistsInCursorRegistry,
+} from "../utils/cursor-config.js";
+import {
   parseCodexServerInput,
   parseOpenCodeServerInput,
   parseServerInput,
+  parseGeminiServerInput,
+  parseCursorServerInput,
 } from "../utils/validation.js";
 import type { TargetOptions } from "../utils/targets.js";
 import { resolveSingleRegistryTarget } from "./registry-targets.js";
@@ -41,7 +51,11 @@ export async function registryAddCommand(options: TargetOptions): Promise<void> 
           ? "  1. Paste your multi-line JSON configuration"
           : target === "codex"
             ? "  1. Paste your single Codex TOML [mcp_servers.<name>] configuration"
-            : "  1. Paste your single OpenCode JSON server entry",
+            : target === "opencode"
+              ? "  1. Paste your single OpenCode JSON server entry"
+              : target === "gemini"
+                ? "  1. Paste your single Gemini CLI JSON server entry"
+                : "  1. Paste your single Cursor JSON server entry",
       ),
     );
     console.log(
@@ -64,13 +78,24 @@ export async function registryAddCommand(options: TargetOptions): Promise<void> 
       console.log(chalk.gray("[mcp_servers.context7]"));
       console.log(chalk.gray('command = "npx"'));
       console.log(chalk.gray('args = ["-y", "@upstash/context7-mcp@latest"]'));
-    } else {
+    } else if (target === "opencode") {
       console.log(chalk.gray('  "context7": {'));
       console.log(chalk.gray('    "type": "remote",'));
       console.log(chalk.gray('    "url": "https://mcp.context7.com/mcp",'));
       console.log(chalk.gray('    "headers": {'));
       console.log(chalk.gray('      "CONTEXT7_API_KEY": "${CONTEXT_7_KEY}"'));
       console.log(chalk.gray('    }'));
+      console.log(chalk.gray('  }'));
+    } else if (target === "gemini") {
+      console.log(chalk.gray('  "playwright": {'));
+      console.log(chalk.gray('    "command": "npx",'));
+      console.log(chalk.gray('    "args": ["@playwright/mcp@latest"]'));
+      console.log(chalk.gray('  }'));
+    } else {
+      console.log(chalk.gray('  "playwright": {'));
+      console.log(chalk.gray('    "type": "stdio",'));
+      console.log(chalk.gray('    "command": "npx",'));
+      console.log(chalk.gray('    "args": ["@playwright/mcp@latest"]'));
       console.log(chalk.gray('  }'));
     }
 
@@ -82,7 +107,11 @@ export async function registryAddCommand(options: TargetOptions): Promise<void> 
           ? "Enter server configuration (paste JSON and save):"
           : target === "codex"
             ? "Enter Codex server configuration (paste TOML and save):"
-            : "Enter OpenCode server configuration (paste JSON and save):",
+            : target === "opencode"
+              ? "Enter OpenCode server configuration (paste JSON and save):"
+              : target === "gemini"
+                ? "Enter Gemini CLI server configuration (paste JSON and save):"
+                : "Enter Cursor server configuration (paste JSON and save):",
       default: "",
       validate: (value) => {
         if (!value.trim()) {
@@ -93,8 +122,12 @@ export async function registryAddCommand(options: TargetOptions): Promise<void> 
             parseServerInput(value);
           } else if (target === "codex") {
             parseCodexServerInput(value);
-          } else {
+          } else if (target === "opencode") {
             parseOpenCodeServerInput(value);
+          } else if (target === "gemini") {
+            parseGeminiServerInput(value);
+          } else {
+            parseCursorServerInput(value);
           }
           return true;
         } catch (error) {
@@ -153,12 +186,62 @@ export async function registryAddCommand(options: TargetOptions): Promise<void> 
       return;
     }
 
-    const { name, config } = parseOpenCodeServerInput(pastedInput);
-    const exists = await serverExistsInOpenCodeRegistry(name);
+    if (target === "opencode") {
+      const { name, config } = parseOpenCodeServerInput(pastedInput);
+      const exists = await serverExistsInOpenCodeRegistry(name);
+
+      if (exists) {
+        const shouldOverwrite = await confirm({
+          message: `Server "${name}" already exists in OpenCode registry. Overwrite?`,
+          default: false,
+        });
+
+        if (!shouldOverwrite) {
+          console.log(chalk.yellow("Cancelled."));
+          return;
+        }
+      }
+
+      await addServerToOpenCodeRegistry(name, config);
+      console.log(
+        chalk.green(
+          `✓ Added "${name}" to OpenCode registry (~/.mcpkit/opencode-mcp-servers.json)`,
+        ),
+      );
+      return;
+    }
+
+    if (target === "gemini") {
+      const { name, config } = parseGeminiServerInput(pastedInput);
+      const exists = await serverExistsInGeminiRegistry(name);
+
+      if (exists) {
+        const shouldOverwrite = await confirm({
+          message: `Server "${name}" already exists in Gemini registry. Overwrite?`,
+          default: false,
+        });
+
+        if (!shouldOverwrite) {
+          console.log(chalk.yellow("Cancelled."));
+          return;
+        }
+      }
+
+      await addServerToGeminiRegistry(name, config);
+      console.log(
+        chalk.green(
+          `✓ Added "${name}" to Gemini registry (~/.mcpkit/gemini-mcp-servers.json)`,
+        ),
+      );
+      return;
+    }
+
+    const { name, config } = parseCursorServerInput(pastedInput);
+    const exists = await serverExistsInCursorRegistry(name);
 
     if (exists) {
       const shouldOverwrite = await confirm({
-        message: `Server "${name}" already exists in OpenCode registry. Overwrite?`,
+        message: `Server "${name}" already exists in Cursor registry. Overwrite?`,
         default: false,
       });
 
@@ -168,10 +251,10 @@ export async function registryAddCommand(options: TargetOptions): Promise<void> 
       }
     }
 
-    await addServerToOpenCodeRegistry(name, config);
+    await addServerToCursorRegistry(name, config);
     console.log(
       chalk.green(
-        `✓ Added "${name}" to OpenCode registry (~/.mcpkit/opencode-mcp-servers.json)`,
+        `✓ Added "${name}" to Cursor registry (~/.mcpkit/cursor-mcp-servers.json)`,
       ),
     );
   } catch (error) {

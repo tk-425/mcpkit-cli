@@ -14,6 +14,12 @@ const UPDATE_PROJECT_TARGET_COPY: Record<McpTarget, UpdateProjectTargetCopy> = {
   opencode: {
     summaryLabel: "OpenCode CLI",
   },
+  gemini: {
+    summaryLabel: "Gemini CLI",
+  },
+  cursor: {
+    summaryLabel: "Cursor",
+  },
 };
 
 export function getUpdateProjectTargetCopy(

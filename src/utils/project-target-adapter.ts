@@ -23,11 +23,35 @@ import {
   removeServerFromOpenCodeProject,
   writeOpenCodeProjectConfig,
 } from "./opencode-config.js";
+import type { GeminiConfigFile, GeminiMcpServerConfig } from "./gemini-config.js";
+import {
+  addServerToGeminiProject,
+  ensureGeminiMcpServers,
+  geminiProjectConfigExists,
+  readGeminiProjectConfig,
+  readGeminiProjectConfigOrDefault,
+  readGeminiRegistry,
+  removeServerFromGeminiProject,
+  writeGeminiProjectConfig,
+} from "./gemini-config.js";
+import type { CursorConfigFile, CursorMcpServerConfig } from "./cursor-config.js";
+import {
+  addServerToCursorProject,
+  cursorProjectConfigExists,
+  ensureCursorMcpServers,
+  readCursorProjectConfig,
+  readCursorProjectConfigOrDefault,
+  readCursorRegistry,
+  removeServerFromCursorProject,
+  writeCursorProjectConfig,
+} from "./cursor-config.js";
 import type { EmitResult } from "./project-emitter.js";
 import {
   emitClaudeProjectServer,
   emitCodexProjectServer,
   emitOpenCodeProjectServer,
+  emitGeminiProjectServer,
+  emitCursorProjectServer,
 } from "./project-emitter.js";
 import type { ProjectConfig } from "./project-config.js";
 import {
@@ -45,6 +69,8 @@ import {
   parseCodexServerInput,
   parseOpenCodeServerInput,
   parseServerInput,
+  parseGeminiServerInput,
+  parseCursorServerInput,
 } from "./validation.js";
 
 export interface ProjectTargetAdapter<TConfig, TRegistry, TServer> {
@@ -155,10 +181,66 @@ const openCodeProjectAdapter: ProjectTargetAdapter<
   parseEditedServerInput: parseOpenCodeServerInput,
 };
 
+const geminiProjectAdapter: ProjectTargetAdapter<
+  GeminiConfigFile,
+  GeminiConfigFile,
+  GeminiMcpServerConfig
+> = {
+  key: "gemini",
+  label: "Gemini CLI",
+  configPath: ".gemini/settings.json",
+  configExists: geminiProjectConfigExists,
+  readConfig: readGeminiProjectConfig,
+  readConfigOrDefault: readGeminiProjectConfigOrDefault,
+  writeConfig: writeGeminiProjectConfig,
+  createEmptyConfig: () => ({ mcpServers: {} }),
+  resetServers: (config) => {
+    config.mcpServers = {};
+  },
+  getProjectServers: ensureGeminiMcpServers,
+  readRegistry: readGeminiRegistry,
+  getRegistryServers: ensureGeminiMcpServers,
+  emitProjectServer: emitGeminiProjectServer,
+  addServer: addServerToGeminiProject,
+  removeServer: removeServerFromGeminiProject,
+  serializeServerForEdit: (name, config) =>
+    JSON.stringify({ [name]: config }, null, 2),
+  parseEditedServerInput: parseGeminiServerInput,
+};
+
+const cursorProjectAdapter: ProjectTargetAdapter<
+  CursorConfigFile,
+  CursorConfigFile,
+  CursorMcpServerConfig
+> = {
+  key: "cursor",
+  label: "Cursor",
+  configPath: ".cursor/mcp.json",
+  configExists: cursorProjectConfigExists,
+  readConfig: readCursorProjectConfig,
+  readConfigOrDefault: readCursorProjectConfigOrDefault,
+  writeConfig: writeCursorProjectConfig,
+  createEmptyConfig: () => ({ mcpServers: {} }),
+  resetServers: (config) => {
+    config.mcpServers = {};
+  },
+  getProjectServers: ensureCursorMcpServers,
+  readRegistry: readCursorRegistry,
+  getRegistryServers: ensureCursorMcpServers,
+  emitProjectServer: emitCursorProjectServer,
+  addServer: addServerToCursorProject,
+  removeServer: removeServerFromCursorProject,
+  serializeServerForEdit: (name, config) =>
+    JSON.stringify({ [name]: config }, null, 2),
+  parseEditedServerInput: parseCursorServerInput,
+};
+
 export const PROJECT_TARGET_ADAPTERS = [
   claudeProjectAdapter,
   codexProjectAdapter,
   openCodeProjectAdapter,
+  geminiProjectAdapter,
+  cursorProjectAdapter,
 ] as const;
 
 export type AnyProjectTargetAdapter =
@@ -174,6 +256,12 @@ export function getProjectTargetAdapter(
   target: "opencode",
 ): ProjectTargetAdapter<OpenCodeConfigFile, OpenCodeConfigFile, OpenCodeMcpServerConfig>;
 export function getProjectTargetAdapter(
+  target: "gemini",
+): ProjectTargetAdapter<GeminiConfigFile, GeminiConfigFile, GeminiMcpServerConfig>;
+export function getProjectTargetAdapter(
+  target: "cursor",
+): ProjectTargetAdapter<CursorConfigFile, CursorConfigFile, CursorMcpServerConfig>;
+export function getProjectTargetAdapter(
   target: McpTarget,
 ): AnyProjectTargetAdapter;
 export function getProjectTargetAdapter(
@@ -185,6 +273,14 @@ export function getProjectTargetAdapter(
 
   if (target === "codex") {
     return codexProjectAdapter;
+  }
+
+  if (target === "gemini") {
+    return geminiProjectAdapter;
+  }
+
+  if (target === "cursor") {
+    return cursorProjectAdapter;
   }
 
   return openCodeProjectAdapter;

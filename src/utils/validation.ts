@@ -1,6 +1,8 @@
 import type { ServerConfig } from './registry.js';
 import type { CodexMcpServerConfig } from './codex-config.js';
 import type { OpenCodeMcpServerConfig } from './opencode-config.js';
+import type { GeminiMcpServerConfig } from './gemini-config.js';
+import type { CursorMcpServerConfig } from './cursor-config.js';
 import { parseToml } from './toml.js';
 
 /**
@@ -473,6 +475,243 @@ export function parseCodexServerInput(
   }
 
   return { name, config };
+}
+
+export function validateGeminiServerConfig(config: any): { valid: boolean; error?: string } {
+  if (typeof config !== 'object' || config === null || Array.isArray(config)) {
+    return { valid: false, error: 'Server configuration must be an object' };
+  }
+
+  const hasCommand = config.command !== undefined;
+  const hasUrl = config.url !== undefined || config.httpUrl !== undefined;
+
+  if (!hasCommand && !hasUrl) {
+    return {
+      valid: false,
+      error: 'Gemini server configuration must include either a "command" field (stdio) or "url"/"httpUrl" field (HTTP)',
+    };
+  }
+
+  if (hasCommand && typeof config.command !== 'string') {
+    return { valid: false, error: '"command" field must be a string' };
+  }
+
+  if (config.url !== undefined && typeof config.url !== 'string') {
+    return { valid: false, error: '"url" field must be a string' };
+  }
+
+  if (config.httpUrl !== undefined && typeof config.httpUrl !== 'string') {
+    return { valid: false, error: '"httpUrl" field must be a string' };
+  }
+
+  if (config.args !== undefined) {
+    const result = validateStringArray(config.args, 'args');
+    if (!result.valid) return result;
+  }
+
+  if (config.env !== undefined) {
+    const result = validateStringRecord(config.env, 'env');
+    if (!result.valid) return result;
+  }
+
+  if (config.headers !== undefined) {
+    const result = validateStringRecord(config.headers, 'headers');
+    if (!result.valid) return result;
+  }
+
+  if (config.cwd !== undefined && typeof config.cwd !== 'string') {
+    return { valid: false, error: '"cwd" field must be a string' };
+  }
+
+  if (config.timeout !== undefined && (typeof config.timeout !== 'number' || !Number.isFinite(config.timeout) || config.timeout < 0)) {
+    return { valid: false, error: '"timeout" field must be a non-negative number' };
+  }
+
+  if (config.trust !== undefined && typeof config.trust !== 'boolean') {
+    return { valid: false, error: '"trust" field must be a boolean' };
+  }
+
+  if (config.includeTools !== undefined) {
+    const result = validateStringArray(config.includeTools, 'includeTools');
+    if (!result.valid) return result;
+  }
+
+  if (config.excludeTools !== undefined) {
+    const result = validateStringArray(config.excludeTools, 'excludeTools');
+    if (!result.valid) return result;
+  }
+
+  return { valid: true };
+}
+
+export function parseGeminiServerInput(
+  input: string,
+): { name: string; config: GeminiMcpServerConfig } {
+  let cleaned = input.trim();
+
+  if (!cleaned) {
+    throw new Error('Input cannot be empty');
+  }
+
+  cleaned = cleaned.replace(/,\s*$/, '');
+
+  if (!cleaned.startsWith('{')) {
+    cleaned = `{${cleaned}}`;
+  }
+
+  const parseResult = parseJSON(cleaned);
+  if (!parseResult.success) {
+    throw new Error(parseResult.error);
+  }
+
+  const parsed = parseResult.data;
+  const entries = Object.entries(parsed);
+
+  if (entries.length === 0) {
+    throw new Error('No server configuration found in input');
+  }
+
+  if (entries.length > 1) {
+    throw new Error('Please provide only one server configuration at a time');
+  }
+
+  const [name, config] = entries[0];
+  const nameValidation = validateServerName(name as string);
+
+  if (!nameValidation.valid) {
+    throw new Error(nameValidation.error);
+  }
+
+  const configValidation = validateGeminiServerConfig(config);
+
+  if (!configValidation.valid) {
+    throw new Error(configValidation.error);
+  }
+
+  return { name: name as string, config: config as GeminiMcpServerConfig };
+}
+
+export function validateCursorServerConfig(config: any): { valid: boolean; error?: string } {
+  if (typeof config !== 'object' || config === null || Array.isArray(config)) {
+    return { valid: false, error: 'Server configuration must be an object' };
+  }
+
+  const hasCommand = config.command !== undefined;
+  const hasUrl = config.url !== undefined;
+
+  if (!hasCommand && !hasUrl) {
+    return {
+      valid: false,
+      error: 'Cursor server configuration must include either a "command" field (stdio) or "url" field (HTTP)',
+    };
+  }
+
+  if (hasCommand && typeof config.command !== 'string') {
+    return { valid: false, error: '"command" field must be a string' };
+  }
+
+  if (hasUrl && typeof config.url !== 'string') {
+    return { valid: false, error: '"url" field must be a string' };
+  }
+
+  if (config.args !== undefined) {
+    const result = validateStringArray(config.args, 'args');
+    if (!result.valid) return result;
+  }
+
+  if (config.env !== undefined) {
+    const result = validateStringRecord(config.env, 'env');
+    if (!result.valid) return result;
+  }
+
+  if (config.headers !== undefined) {
+    const result = validateStringRecord(config.headers, 'headers');
+    if (!result.valid) return result;
+  }
+
+  if (hasCommand) {
+    if (config.type === undefined || config.type !== 'stdio') {
+      return { valid: false, error: 'STDIO servers require "type": "stdio" for Cursor' };
+    }
+  }
+
+  if (config.type !== undefined && config.type !== 'stdio') {
+    return { valid: false, error: '"type" field must be "stdio"' };
+  }
+
+  if (config.envFile !== undefined && typeof config.envFile !== 'string') {
+    return { valid: false, error: '"envFile" field must be a string' };
+  }
+
+  if (config.auth !== undefined) {
+    if (typeof config.auth !== 'object' || config.auth === null || Array.isArray(config.auth)) {
+      return { valid: false, error: '"auth" field must be an object' };
+    }
+
+    const auth = config.auth as Record<string, unknown>;
+
+    if (typeof auth['CLIENT_ID'] !== 'string') {
+      return { valid: false, error: '"auth.CLIENT_ID" field must be a string' };
+    }
+
+    if (auth['CLIENT_SECRET'] !== undefined && typeof auth['CLIENT_SECRET'] !== 'string') {
+      return { valid: false, error: '"auth.CLIENT_SECRET" field must be a string' };
+    }
+
+    if (auth['scopes'] !== undefined) {
+      const result = validateStringArray(auth['scopes'], 'auth.scopes');
+      if (!result.valid) return result;
+    }
+  }
+
+  return { valid: true };
+}
+
+export function parseCursorServerInput(
+  input: string,
+): { name: string; config: CursorMcpServerConfig } {
+  let cleaned = input.trim();
+
+  if (!cleaned) {
+    throw new Error('Input cannot be empty');
+  }
+
+  cleaned = cleaned.replace(/,\s*$/, '');
+
+  if (!cleaned.startsWith('{')) {
+    cleaned = `{${cleaned}}`;
+  }
+
+  const parseResult = parseJSON(cleaned);
+  if (!parseResult.success) {
+    throw new Error(parseResult.error);
+  }
+
+  const parsed = parseResult.data;
+  const entries = Object.entries(parsed);
+
+  if (entries.length === 0) {
+    throw new Error('No server configuration found in input');
+  }
+
+  if (entries.length > 1) {
+    throw new Error('Please provide only one server configuration at a time');
+  }
+
+  const [name, config] = entries[0];
+  const nameValidation = validateServerName(name as string);
+
+  if (!nameValidation.valid) {
+    throw new Error(nameValidation.error);
+  }
+
+  const configValidation = validateCursorServerConfig(config);
+
+  if (!configValidation.valid) {
+    throw new Error(configValidation.error);
+  }
+
+  return { name: name as string, config: config as CursorMcpServerConfig };
 }
 
 export function parseOpenCodeServerInput(

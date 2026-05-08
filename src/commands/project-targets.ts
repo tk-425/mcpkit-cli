@@ -21,6 +21,8 @@ export async function promptProjectTargets(): Promise<McpTarget[]> {
       { name: "Claude Code", value: "claude", checked: false },
       { name: "Codex CLI", value: "codex", checked: false },
       { name: "OpenCode CLI", value: "opencode", checked: false },
+      { name: "Gemini CLI", value: "gemini", checked: false },
+      { name: "Cursor", value: "cursor", checked: false },
     ],
     required: false,
   });

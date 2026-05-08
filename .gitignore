@@ -26,11 +26,12 @@ tests/
 # AI Agents
 .rulez/
 .claude/
-.agent/
+.agents/
 .codex/
 .gemini/
 .qwen/
 .opencode/
+.cursor/
 .mcp.json
 opencode.json
 GEMINI.md

@@ -37,6 +37,24 @@ const ADD_PROJECT_TARGET_COPY: Record<McpTarget, AddProjectTargetCopy> = {
     successMessage: (count) =>
       `\n✓ Added ${count} OpenCode server${count === 1 ? "" : "s"} to opencode.json`,
   },
+  gemini: {
+    selectionMessage: "Select Gemini CLI MCP servers to add to .gemini/settings.json:",
+    cancelledMessage: "No Gemini CLI servers selected. Cancelled.",
+    noAvailableMessage: "No new Gemini CLI servers available to add.",
+    noChangesMessage: "No Gemini CLI servers were added.",
+    skippedServersHeading: "Skipped Gemini CLI servers:",
+    successMessage: (count) =>
+      `\n✓ Added ${count} Gemini server${count === 1 ? "" : "s"} to .gemini/settings.json`,
+  },
+  cursor: {
+    selectionMessage: "Select Cursor MCP servers to add to .cursor/mcp.json:",
+    cancelledMessage: "No Cursor servers selected. Cancelled.",
+    noAvailableMessage: "No new Cursor servers available to add.",
+    noChangesMessage: "No Cursor servers were added.",
+    skippedServersHeading: "Skipped Cursor servers:",
+    successMessage: (count) =>
+      `\n✓ Added ${count} Cursor server${count === 1 ? "" : "s"} to .cursor/mcp.json`,
+  },
 };
 
 export function getAddProjectTargetCopy(target: McpTarget): AddProjectTargetCopy {

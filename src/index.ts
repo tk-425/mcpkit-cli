@@ -19,7 +19,9 @@ function withTargetOptions(command: Command): Command {
   return command
     .option("--claude", "Target Claude Code configuration")
     .option("--codex", "Target Codex CLI configuration")
-    .option("--opencode", "Target OpenCode CLI configuration");
+    .option("--opencode", "Target OpenCode CLI configuration")
+    .option("--gemini", "Target Gemini CLI configuration")
+    .option("--cursor", "Target Cursor configuration");
 }
 
 program

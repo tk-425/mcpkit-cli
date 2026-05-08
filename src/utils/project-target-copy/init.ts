@@ -57,6 +57,34 @@ const INIT_PROJECT_TARGET_COPY: Record<McpTarget, InitProjectTargetCopy> = {
     successMessage: (count) =>
       `\n✓ Updated opencode.json with ${count} OpenCode server${count === 1 ? "" : "s"}`,
   },
+  gemini: {
+    emptyRegistryMessage: "No Gemini CLI MCP servers in registry.",
+    emptyRegistryHint:
+      'Use "mcpkit registry add --gemini" to add servers to your registry first.',
+    mergePrompt: ".gemini/settings.json already exists. Do you want to merge with existing servers?",
+    overwritePrompt: "Overwrite MCP server entries in .gemini/settings.json?",
+    selectionMessage: "Select Gemini CLI MCP servers for .gemini/settings.json:",
+    cancelledMessage: "Gemini CLI init cancelled.",
+    noChangesMessage: "No Gemini CLI servers were added.",
+    selectedHeading: "Selected Gemini CLI servers:",
+    skippedServersHeading: "Skipped Gemini CLI servers:",
+    successMessage: (count) =>
+      `\n✓ Updated .gemini/settings.json with ${count} Gemini server${count === 1 ? "" : "s"}`,
+  },
+  cursor: {
+    emptyRegistryMessage: "No Cursor MCP servers in registry.",
+    emptyRegistryHint:
+      'Use "mcpkit registry add --cursor" to add servers to your registry first.',
+    mergePrompt: ".cursor/mcp.json already exists. Do you want to merge with existing servers?",
+    overwritePrompt: "Overwrite MCP server entries in .cursor/mcp.json?",
+    selectionMessage: "Select Cursor MCP servers for .cursor/mcp.json:",
+    cancelledMessage: "Cursor init cancelled.",
+    noChangesMessage: "No Cursor servers were added.",
+    selectedHeading: "Selected Cursor servers:",
+    skippedServersHeading: "Skipped Cursor servers:",
+    successMessage: (count) =>
+      `\n✓ Updated .cursor/mcp.json with ${count} Cursor server${count === 1 ? "" : "s"}`,
+  },
 };
 
 export function getInitProjectTargetCopy(

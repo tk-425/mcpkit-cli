@@ -10,6 +10,16 @@ import {
   openCodeProjectConfigExists,
   readOpenCodeProjectConfig,
 } from '../utils/opencode-config.js';
+import {
+  ensureGeminiMcpServers,
+  geminiProjectConfigExists,
+  readGeminiProjectConfig,
+} from '../utils/gemini-config.js';
+import {
+  ensureCursorMcpServers,
+  cursorProjectConfigExists,
+  readCursorProjectConfig,
+} from '../utils/cursor-config.js';
 import { getExplicitTargets, type TargetOptions } from '../utils/targets.js';
 
 interface ListCommandOptions extends TargetOptions {
@@ -117,6 +127,72 @@ function renderOpenCodeSection(
   console.log(chalk.gray(`Total: ${serverNames.length} server${serverNames.length === 1 ? '' : 's'}`));
 }
 
+function renderGeminiSection(
+  serverNames: string[],
+  projectConfig?: Awaited<ReturnType<typeof readGeminiProjectConfig>>,
+  verbose?: boolean,
+): void {
+  console.log(chalk.blue('Gemini CLI Project MCP Servers (.gemini/settings.json):'));
+
+  if (!projectConfig) {
+    console.log(chalk.yellow('  Not configured'));
+    return;
+  }
+
+  if (serverNames.length === 0) {
+    console.log(chalk.yellow('  No MCP servers configured'));
+    return;
+  }
+
+  const servers = ensureGeminiMcpServers(projectConfig);
+
+  if (verbose) {
+    serverNames.forEach((name) => {
+      console.log(chalk.green(`\n  • ${name}`));
+      console.log(chalk.gray(`    ${renderJsonConfig(servers[name])}`));
+    });
+  } else {
+    serverNames.forEach((name) => {
+      console.log(chalk.green(`  • ${name}`));
+    });
+  }
+
+  console.log(chalk.gray(`Total: ${serverNames.length} server${serverNames.length === 1 ? '' : 's'}`));
+}
+
+function renderCursorSection(
+  serverNames: string[],
+  projectConfig?: Awaited<ReturnType<typeof readCursorProjectConfig>>,
+  verbose?: boolean,
+): void {
+  console.log(chalk.blue('Cursor Project MCP Servers (.cursor/mcp.json):'));
+
+  if (!projectConfig) {
+    console.log(chalk.yellow('  Not configured'));
+    return;
+  }
+
+  if (serverNames.length === 0) {
+    console.log(chalk.yellow('  No MCP servers configured'));
+    return;
+  }
+
+  const servers = ensureCursorMcpServers(projectConfig);
+
+  if (verbose) {
+    serverNames.forEach((name) => {
+      console.log(chalk.green(`\n  • ${name}`));
+      console.log(chalk.gray(`    ${renderJsonConfig(servers[name])}`));
+    });
+  } else {
+    serverNames.forEach((name) => {
+      console.log(chalk.green(`  • ${name}`));
+    });
+  }
+
+  console.log(chalk.gray(`Total: ${serverNames.length} server${serverNames.length === 1 ? '' : 's'}`));
+}
+
 /**
  * Command handler for 'mcpkit list'
  */
@@ -126,6 +202,8 @@ export async function listCommand(options: ListCommandOptions): Promise<void> {
     const showClaude = explicitTargets.length === 0 || explicitTargets.includes('claude');
     const showCodex = explicitTargets.length === 0 || explicitTargets.includes('codex');
     const showOpenCode = explicitTargets.length === 0 || explicitTargets.includes('opencode');
+    const showGemini = explicitTargets.length === 0 || explicitTargets.includes('gemini');
+    const showCursor = explicitTargets.length === 0 || explicitTargets.includes('cursor');
 
     if (showClaude) {
       if (projectConfigExists()) {
@@ -171,6 +249,40 @@ export async function listCommand(options: ListCommandOptions): Promise<void> {
         );
       } else {
         renderOpenCodeSection([], undefined, options.verbose);
+      }
+    }
+
+    if ((showClaude || showCodex || showOpenCode) && showGemini) {
+      console.log();
+    }
+
+    if (showGemini) {
+      if (geminiProjectConfigExists()) {
+        const projectConfig = await readGeminiProjectConfig();
+        renderGeminiSection(
+          Object.keys(ensureGeminiMcpServers(projectConfig)).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })),
+          projectConfig,
+          options.verbose,
+        );
+      } else {
+        renderGeminiSection([], undefined, options.verbose);
+      }
+    }
+
+    if ((showClaude || showCodex || showOpenCode || showGemini) && showCursor) {
+      console.log();
+    }
+
+    if (showCursor) {
+      if (cursorProjectConfigExists()) {
+        const projectConfig = await readCursorProjectConfig();
+        renderCursorSection(
+          Object.keys(ensureCursorMcpServers(projectConfig)).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })),
+          projectConfig,
+          options.verbose,
+        );
+      } else {
+        renderCursorSection([], undefined, options.verbose);
       }
     }
   } catch (error) {

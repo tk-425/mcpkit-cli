@@ -32,6 +32,20 @@ const REMOVE_PROJECT_TARGET_COPY: Record<McpTarget, RemoveProjectTargetCopy> = {
     confirmMessage: (count) => `Remove ${count} OpenCode server(s) from opencode.json?`,
     successMessage: (name) => `✓ Removed "${name}" from opencode.json`,
   },
+  gemini: {
+    selectionMessage: "Select Gemini CLI MCP servers to remove from .gemini/settings.json:",
+    emptyMessage: "No Gemini CLI MCP servers found in .gemini/settings.json",
+    cancelledMessage: "Gemini CLI removal cancelled.",
+    confirmMessage: (count) => `Remove ${count} Gemini server(s) from .gemini/settings.json?`,
+    successMessage: (name) => `✓ Removed "${name}" from .gemini/settings.json`,
+  },
+  cursor: {
+    selectionMessage: "Select Cursor MCP servers to remove from .cursor/mcp.json:",
+    emptyMessage: "No Cursor MCP servers found in .cursor/mcp.json",
+    cancelledMessage: "Cursor removal cancelled.",
+    confirmMessage: (count) => `Remove ${count} Cursor server(s) from .cursor/mcp.json?`,
+    successMessage: (name) => `✓ Removed "${name}" from .cursor/mcp.json`,
+  },
 };
 
 export function getRemoveProjectTargetCopy(
