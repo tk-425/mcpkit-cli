@@ -114,6 +114,48 @@ export function getProjectGitignorePath(): string {
 }
 
 /**
+ * Get the path to the Gemini CLI project config directory (.gemini in current directory)
+ */
+export function getGeminiProjectDirPath(): string {
+  return join(process.cwd(), '.gemini');
+}
+
+/**
+ * Get the path to the Gemini CLI project config file (.gemini/settings.json in current directory)
+ */
+export function getGeminiProjectConfigPath(): string {
+  return join(getGeminiProjectDirPath(), 'settings.json');
+}
+
+/**
+ * Get the path to the Gemini registry file (~/.mcpkit/gemini-mcp-servers.json)
+ */
+export function getGeminiRegistryPath(): string {
+  return join(getRegistryDir(), 'gemini-mcp-servers.json');
+}
+
+/**
+ * Get the path to the Cursor project config directory (.cursor in current directory)
+ */
+export function getCursorProjectDirPath(): string {
+  return join(process.cwd(), '.cursor');
+}
+
+/**
+ * Get the path to the Cursor project config file (.cursor/mcp.json in current directory)
+ */
+export function getCursorProjectConfigPath(): string {
+  return join(getCursorProjectDirPath(), 'mcp.json');
+}
+
+/**
+ * Get the path to the Cursor registry file (~/.mcpkit/cursor-mcp-servers.json)
+ */
+export function getCursorRegistryPath(): string {
+  return join(getRegistryDir(), 'cursor-mcp-servers.json');
+}
+
+/**
  * Backward-compatible alias for the Claude registry path.
  */
 export function getRegistryPath(): string {

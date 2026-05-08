@@ -20,6 +20,14 @@ import {
   readOpenCodeProjectConfig,
 } from './opencode-config.js';
 import {
+  geminiProjectConfigExists,
+  readGeminiProjectConfig,
+} from './gemini-config.js';
+import {
+  cursorProjectConfigExists,
+  readCursorProjectConfig,
+} from './cursor-config.js';
+import {
   WRAPPER_LOAD_ENV_METADATA_PREFIX,
   buildLoadEnvScript,
   buildWrapperScript,
@@ -169,6 +177,30 @@ export async function collectReferencedWrapperPaths(): Promise<Set<string>> {
         typeof config.command[0] === 'string'
       ) {
         const resolved = await canonicalizePath(config.command[0]);
+        if (resolved.startsWith(runtimeBinDir + '/') || resolved === runtimeBinDir) {
+          referencedPaths.add(resolved);
+        }
+      }
+    }
+  }
+
+  if (geminiProjectConfigExists()) {
+    const geminiConfig = await readGeminiProjectConfig();
+    for (const config of Object.values(geminiConfig.mcpServers ?? {})) {
+      if (typeof config.command === 'string') {
+        const resolved = await canonicalizePath(config.command);
+        if (resolved.startsWith(runtimeBinDir + '/') || resolved === runtimeBinDir) {
+          referencedPaths.add(resolved);
+        }
+      }
+    }
+  }
+
+  if (cursorProjectConfigExists()) {
+    const cursorConfig = await readCursorProjectConfig();
+    for (const config of Object.values(cursorConfig.mcpServers ?? {})) {
+      if (typeof config.command === 'string') {
+        const resolved = await canonicalizePath(config.command);
         if (resolved.startsWith(runtimeBinDir + '/') || resolved === runtimeBinDir) {
           referencedPaths.add(resolved);
         }

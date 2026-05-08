@@ -18,6 +18,14 @@ const COMMON_PROJECT_TARGET_COPY: Record<McpTarget, CommonProjectTargetCopy> = {
     missingConfigError: "Error: opencode.json not found in current directory",
     missingConfigHint: 'Use "mcpkit init --opencode" or "mcpkit init" to create it first',
   },
+  gemini: {
+    missingConfigError: "Error: .gemini/settings.json not found in current directory",
+    missingConfigHint: 'Use "mcpkit init --gemini" or "mcpkit init" to create it first',
+  },
+  cursor: {
+    missingConfigError: "Error: .cursor/mcp.json not found in current directory",
+    missingConfigHint: 'Use "mcpkit init --cursor" or "mcpkit init" to create it first',
+  },
 };
 
 export function getCommonProjectTargetCopy(

@@ -11,6 +11,16 @@ import {
   readOpenCodeRegistry,
   removeServerFromOpenCodeRegistry,
 } from "../utils/opencode-config.js";
+import {
+  ensureGeminiMcpServers,
+  readGeminiRegistry,
+  removeServerFromGeminiRegistry,
+} from "../utils/gemini-config.js";
+import {
+  ensureCursorMcpServers,
+  readCursorRegistry,
+  removeServerFromCursorRegistry,
+} from "../utils/cursor-config.js";
 import type { TargetOptions } from "../utils/targets.js";
 import { resolveSingleRegistryTarget } from "./registry-targets.js";
 
@@ -30,7 +40,11 @@ export async function registryRemoveCommand(options: TargetOptions): Promise<voi
       ? Object.keys((await readRegistry()).servers).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
       : target === "codex"
         ? Object.keys(ensureCodexMcpServers(await readCodexRegistry())).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
-        : Object.keys(ensureOpenCodeMcpServers(await readOpenCodeRegistry())).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+        : target === "opencode"
+          ? Object.keys(ensureOpenCodeMcpServers(await readOpenCodeRegistry())).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
+          : target === "gemini"
+            ? Object.keys(ensureGeminiMcpServers(await readGeminiRegistry())).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
+            : Object.keys(ensureCursorMcpServers(await readCursorRegistry())).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
 
     if (serverNames.length === 0) {
       console.log(
@@ -39,7 +53,11 @@ export async function registryRemoveCommand(options: TargetOptions): Promise<voi
             ? "No MCP servers found in Claude registry"
             : target === "codex"
               ? "No MCP servers found in Codex registry"
-              : "No MCP servers found in OpenCode registry",
+              : target === "opencode"
+                ? "No MCP servers found in OpenCode registry"
+                : target === "gemini"
+                  ? "No MCP servers found in Gemini registry"
+                  : "No MCP servers found in Cursor registry",
         ),
       );
       return;
@@ -51,7 +69,11 @@ export async function registryRemoveCommand(options: TargetOptions): Promise<voi
           ? "\nSelect Claude Code MCP servers to remove from registry:"
           : target === "codex"
             ? "\nSelect Codex CLI MCP servers to remove from registry:"
-            : "\nSelect OpenCode CLI MCP servers to remove from registry:",
+            : target === "opencode"
+              ? "\nSelect OpenCode CLI MCP servers to remove from registry:"
+              : target === "gemini"
+                ? "\nSelect Gemini CLI MCP servers to remove from registry:"
+                : "\nSelect Cursor MCP servers to remove from registry:",
       ),
     );
     console.log(
@@ -76,7 +98,7 @@ export async function registryRemoveCommand(options: TargetOptions): Promise<voi
     }
 
     const confirmed = await confirm({
-      message: `Are you sure you want to remove ${serversToRemove.length} server(s) from the ${target === "claude" ? "Claude" : target === "codex" ? "Codex" : "OpenCode"} registry?`,
+      message: `Are you sure you want to remove ${serversToRemove.length} server(s) from the ${target === "claude" ? "Claude" : target === "codex" ? "Codex" : target === "opencode" ? "OpenCode" : target === "gemini" ? "Gemini" : "Cursor"} registry?`,
       default: false,
     });
 
@@ -100,11 +122,25 @@ export async function registryRemoveCommand(options: TargetOptions): Promise<voi
             `✓ Removed "${serverName}" from Codex registry (~/.mcpkit/codex-mcp-servers.toml)`,
           ),
         );
-      } else {
+      } else if (target === "opencode") {
         await removeServerFromOpenCodeRegistry(serverName);
         console.log(
           chalk.green(
             `✓ Removed "${serverName}" from OpenCode registry (~/.mcpkit/opencode-mcp-servers.json)`,
+          ),
+        );
+      } else if (target === "gemini") {
+        await removeServerFromGeminiRegistry(serverName);
+        console.log(
+          chalk.green(
+            `✓ Removed "${serverName}" from Gemini registry (~/.mcpkit/gemini-mcp-servers.json)`,
+          ),
+        );
+      } else {
+        await removeServerFromCursorRegistry(serverName);
+        console.log(
+          chalk.green(
+            `✓ Removed "${serverName}" from Cursor registry (~/.mcpkit/cursor-mcp-servers.json)`,
           ),
         );
       }

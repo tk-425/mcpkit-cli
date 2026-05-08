@@ -1,4 +1,5 @@
 const ENV_VAR_PATTERN = /\$\{([A-Z0-9_]+)\}/g;
+const DOTENV_PATTERN = /\{env:([A-Za-z0-9_]+)\}/g;
 
 export function findInterpolatedEnvNames(value: unknown): string[] {
   const names = new Set<string>();
@@ -6,6 +7,9 @@ export function findInterpolatedEnvNames(value: unknown): string[] {
   function walk(current: unknown): void {
     if (typeof current === 'string') {
       for (const match of current.matchAll(ENV_VAR_PATTERN)) {
+        names.add(match[1]);
+      }
+      for (const match of current.matchAll(DOTENV_PATTERN)) {
         names.add(match[1]);
       }
       return;
@@ -30,6 +34,12 @@ export function hasInterpolatedEnv(value: unknown): boolean {
 }
 
 export function isPureEnvReference(value: string): string | null {
-  const match = value.match(/^\$\{([A-Z0-9_]+)\}$/);
+  const match =
+    value.match(/^\$\{([A-Z0-9_]+)\}$/) ||
+    value.match(/^\$?\{env:([A-Za-z0-9_]+)\}$/);
   return match ? match[1] : null;
+}
+
+export function normalizeEnvSyntax(value: string): string {
+  return value.replace(/\$?\{env:([A-Za-z0-9_]+)\}/g, '${$1}');
 }

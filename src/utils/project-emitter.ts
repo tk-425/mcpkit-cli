@@ -1,11 +1,15 @@
 import type { CodexMcpServerConfig } from './codex-config.js';
 import type { OpenCodeMcpServerConfig } from './opencode-config.js';
+import type { GeminiMcpServerConfig } from './gemini-config.js';
+import type { CursorMcpServerConfig } from './cursor-config.js';
 import { ensureServerWrapper } from './project-runtime.js';
 import type { ServerConfig } from './registry.js';
 import {
   resolveClaudeWrapperConfig,
   resolveCodexWrapperConfig,
   resolveOpenCodeWrapperConfig,
+  resolveGeminiWrapperConfig,
+  resolveCursorWrapperConfig,
 } from './wrapper-rules.js';
 
 export interface EmitResult<T> {
@@ -128,6 +132,84 @@ export async function emitOpenCodeProjectServer(
       ...rest,
       type: 'local',
       command: [runtime.wrapperPath!],
+    },
+    usedWrapper: true,
+    skipped: false,
+    wrapperPath: runtime.wrapperPath,
+  };
+}
+
+export async function emitGeminiProjectServer(
+  name: string,
+  config: GeminiMcpServerConfig,
+): Promise<EmitResult<GeminiMcpServerConfig>> {
+  const resolution = resolveGeminiWrapperConfig(name, config);
+
+  if (resolution.kind === 'direct') {
+    return { config, usedWrapper: false, skipped: false };
+  }
+
+  if (resolution.kind === 'skip') {
+    return {
+      usedWrapper: false,
+      skipped: true,
+      reason: resolution.reason,
+    };
+  }
+
+  const runtime = await ensureServerWrapper(resolution.wrapper!);
+  const {
+    args: _args,
+    env: _env,
+    url: _url,
+    httpUrl: _httpUrl,
+    headers: _headers,
+    cwd: _cwd,
+    ...rest
+  } = config;
+
+  return {
+    config: {
+      ...rest,
+      command: runtime.wrapperPath,
+    },
+    usedWrapper: true,
+    skipped: false,
+    wrapperPath: runtime.wrapperPath,
+  };
+}
+
+export async function emitCursorProjectServer(
+  name: string,
+  config: CursorMcpServerConfig,
+): Promise<EmitResult<CursorMcpServerConfig>> {
+  const resolution = resolveCursorWrapperConfig(name, config);
+
+  if (resolution.kind === 'direct') {
+    return { config, usedWrapper: false, skipped: false };
+  }
+
+  if (resolution.kind === 'skip') {
+    return {
+      usedWrapper: false,
+      skipped: true,
+      reason: resolution.reason,
+    };
+  }
+
+  const runtime = await ensureServerWrapper(resolution.wrapper!);
+  const {
+    args: _args,
+    env: _env,
+    url: _url,
+    headers: _headers,
+    ...rest
+  } = config;
+
+  return {
+    config: {
+      ...rest,
+      command: runtime.wrapperPath,
     },
     usedWrapper: true,
     skipped: false,

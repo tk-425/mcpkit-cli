@@ -47,13 +47,17 @@ async function runInitFlow<TConfig, TRegistry, TServer>(
   const registryServers = adapter.getRegistryServers(registry);
   const serverNames = sortCaseInsensitive(Object.keys(registryServers));
 
+  const configExists = adapter.configExists();
+
   if (serverNames.length === 0) {
+    if (!configExists) {
+      await adapter.writeConfig(adapter.createEmptyConfig());
+      console.log(chalk.green(`\n✓ Scaffolded empty ${adapter.configPath}`));
+    }
     console.log(chalk.yellow(copy.emptyRegistryMessage));
     console.log(chalk.gray(copy.emptyRegistryHint));
     return;
   }
-
-  const configExists = adapter.configExists();
   let shouldMerge = false;
 
   if (configExists) {
