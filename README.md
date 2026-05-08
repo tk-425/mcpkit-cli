@@ -1,16 +1,17 @@
 # mcpkit
 
-**MCP Server Configuration Manager** - A CLI tool to manage project-scoped MCP server configuration for Claude Code, Codex CLI, and OpenCode CLI.
+**MCP Server Configuration Manager** - A CLI tool to manage project-scoped MCP server configuration for Claude Code, Codex CLI, OpenCode CLI, Gemini CLI, and Cursor.
 
 ## Features
 
-- Interactive target selection for Claude Code, Codex CLI, OpenCode CLI, or any combination
-- Separate native registries for Claude JSON, Codex TOML, and OpenCode JSON
-- Project-level management for `.mcp.json`, `.codex/config.toml`, and `opencode.json`
+- Interactive target selection for Claude Code, Codex CLI, OpenCode CLI, Gemini CLI, Cursor, or any combination
+- Separate native registries for each target (JSON, TOML, JSON)
+- Project-level management for `.mcp.json`, `.codex/config.toml`, `opencode.json`, `.gemini/settings.json`, and `.cursor/mcp.json`
 - Optional project-local wrapper emission under `.mcpkit/bin/` for servers that need deterministic env loading
-- Target flags for explicit workflows: `--claude`, `--codex`, and `--opencode`
-- Smart validation for both JSON and TOML MCP server definitions
+- Target flags for explicit workflows: `--claude`, `--codex`, `--opencode`, `--gemini`, `--cursor`
+- Smart validation for JSON and TOML MCP server definitions, including Cursor's `"type": "stdio"` requirement
 - Support for both stdio and streamable HTTP MCP servers
+- Detects `${VAR}`, `{env:VAR}`, and `${env:VAR}` interpolation formats across all targets
 
 ## Project Runtime Wrappers
 
@@ -18,24 +19,34 @@ Some MCP servers rely on env-driven startup behavior that is not consistently ha
 
 Current behavior:
 
-- if a selected server does not use `${VAR}`, `mcpkit` emits it directly
-- if a selected server uses `${VAR}` in an easy stdio launcher shape, `mcpkit` wraps it automatically under `.mcpkit/bin/`
-- if a selected server uses `${VAR}` in a supported remote/http auth shape, `mcpkit` converts it into a local `supergateway` launcher and wraps that launcher under `.mcpkit/bin/`
-- if a selected server uses `${VAR}` in a remote/http shape outside that first-pass support boundary, `mcpkit` warns and skips it instead of emitting raw interpolation into project config
-- OpenCode follows the same wrapper policy: supported env-interpolated remote headers and local command env interpolation are emitted through `.mcpkit/bin/*`; direct OpenCode servers remain direct
+- if a selected server does not use env interpolation, `mcpkit` emits it directly
+- if a selected server uses env interpolation in an easy stdio launcher shape, `mcpkit` wraps it automatically under `.mcpkit/bin/`
+- if a selected server uses env interpolation in a supported remote/http auth shape, `mcpkit` converts it into a local `supergateway` launcher and wraps that launcher under `.mcpkit/bin/`
+- if a selected server uses env interpolation in a remote/http shape outside that first-pass support boundary, `mcpkit` warns and skips it instead of emitting raw interpolation into project config
+- Claude, Codex, OpenCode, Gemini, and Cursor all follow the same wrapper policy
+
+Supported interpolation formats:
+
+- `${VAR}` — Claude, Codex, Gemini
+- `{env:VAR}` — OpenCode
+- `${env:VAR}` — Cursor
+
+All formats are normalized to `${VAR}` in generated wrapper scripts.
 
 Rule of thumb:
 
-- `${VAR}` found in a selected stdio launcher config -> wrap it
-- `${VAR}` found in a supported remote/http auth config -> convert it to a local `supergateway` launcher, then wrap it
-- `${VAR}` found in an unsupported remote/http config -> skip it until `mcpkit` has a safe conversion rule for that shape
-- no `${VAR}` -> emit the native config directly
+- env interpolation found in a selected stdio launcher config → wrap it
+- env interpolation found in a supported remote/http auth config → convert to a local `supergateway` launcher, then wrap it
+- env interpolation found in an unsupported remote/http config → skip it until `mcpkit` has a safe conversion rule for that shape
+- no env interpolation → emit the native config directly
 
 When wrapper-backed emission is used:
 
 - Claude still receives native `.mcp.json`
 - Codex still receives native `.codex/config.toml`
 - OpenCode still receives native `opencode.json`
+- Gemini still receives native `.gemini/settings.json`
+- Cursor still receives native `.cursor/mcp.json`
 - the emitted `command` points at a generated wrapper under `.mcpkit/bin/`
 
 Generated runtime layout:
@@ -46,6 +57,10 @@ Generated runtime layout:
   .codex/
     config.toml
   opencode.json
+  .gemini/
+    settings.json
+  .cursor/
+    mcp.json
   .mcpkit/
     bin/
       load-env
@@ -177,7 +192,7 @@ mcpkit --version
 
 ## Command Model
 
-`mcpkit` supports three target platforms:
+`mcpkit` supports five target platforms:
 
 - **Claude Code**
   - Registry: `~/.mcpkit/mcp-servers.json`
@@ -188,12 +203,20 @@ mcpkit --version
 - **OpenCode CLI**
   - Registry: `~/.mcpkit/opencode-mcp-servers.json`
   - Project config: `opencode.json`
+- **Gemini CLI**
+  - Registry: `~/.mcpkit/gemini-mcp-servers.json`
+  - Project config: `.gemini/settings.json`
+- **Cursor**
+  - Registry: `~/.mcpkit/cursor-mcp-servers.json`
+  - Project config: `.cursor/mcp.json`
 
 Mutating commands support:
 
 - `--claude` for Claude only
 - `--codex` for Codex only
 - `--opencode` for OpenCode only
+- `--gemini` for Gemini only
+- `--cursor` for Cursor only
 - no flag: interactive target selection
 
 Read-only list commands support:
@@ -252,6 +275,39 @@ Example input:
 }
 ```
 
+Gemini CLI registry entry:
+
+```bash
+mcpkit registry add --gemini
+```
+
+Example input:
+
+```json
+"playwright": {
+  "command": "npx",
+  "args": ["@playwright/mcp@latest"]
+}
+```
+
+Cursor registry entry:
+
+```bash
+mcpkit registry add --cursor
+```
+
+Example input:
+
+```json
+"playwright": {
+  "type": "stdio",
+  "command": "npx",
+  "args": ["@playwright/mcp@latest"]
+}
+```
+
+Note: Cursor requires `"type": "stdio"` for command-based servers.
+
 ### 2. View your registries
 
 ```bash
@@ -264,6 +320,8 @@ Filter to one target:
 mcpkit registry list --claude
 mcpkit registry list --codex
 mcpkit registry list --opencode
+mcpkit registry list --gemini
+mcpkit registry list --cursor
 ```
 
 ### 3. Initialize a project
@@ -279,13 +337,11 @@ This prompts you to choose:
 - Claude Code
 - Codex CLI
 - OpenCode CLI
+- Gemini CLI
+- Cursor
 - or any combination
 
-If you choose all targets, `mcpkit` will:
-
-1. prompt for Claude Code servers and write `.mcp.json`
-2. prompt for Codex CLI servers and write `.codex/config.toml`
-3. prompt for OpenCode CLI servers and write `opencode.json`
+If you choose all targets, `mcpkit` will prompt for servers and write each config in sequence. If a target's registry is empty, `mcpkit` scaffolds an empty config file and tells you to add servers first.
 
 ### 4. View project servers
 
@@ -299,6 +355,8 @@ Filter to one target:
 mcpkit list --claude
 mcpkit list --codex
 mcpkit list --opencode
+mcpkit list --gemini
+mcpkit list --cursor
 ```
 
 ## Commands
@@ -316,14 +374,20 @@ mcpkit init
 mcpkit init --claude
 mcpkit init --codex
 mcpkit init --opencode
+mcpkit init --gemini
+mcpkit init --cursor
 ```
 
 Behavior:
 
-- no flags: prompt for Claude, Codex, OpenCode, or any combination
+- no flags: prompt for target selection (Claude, Codex, OpenCode, Gemini, Cursor, or any combination)
 - `--claude`: create or update `.mcp.json`
 - `--codex`: create or update `.codex/config.toml`
 - `--opencode`: create or update `opencode.json`
+- `--gemini`: create or update `.gemini/settings.json`
+- `--cursor`: create or update `.cursor/mcp.json`
+
+If the selected target's registry is empty, `mcpkit init` scaffolds an empty config file so the tool can discover it, and prompts you to add servers via `mcpkit registry add`.
 
 #### `mcpkit add`
 
@@ -334,6 +398,8 @@ mcpkit add
 mcpkit add --claude
 mcpkit add --codex
 mcpkit add --opencode
+mcpkit add --gemini
+mcpkit add --cursor
 ```
 
 #### `mcpkit refresh`
@@ -345,13 +411,15 @@ mcpkit refresh
 mcpkit refresh --claude
 mcpkit refresh --codex
 mcpkit refresh --opencode
+mcpkit refresh --gemini
+mcpkit refresh --cursor
 ```
 
 Behavior:
 
 - only touches the current directory
 - updates only targets whose project config already exists
-- if none of `.mcp.json`, `.codex/config.toml`, or `opencode.json` exists, tells you to run `mcpkit init` first
+- if none of the expected project configs exist, tells you to run `mcpkit init` first
 - refreshes only server names already present in the project config
 - preserves project entries that are missing from the registry and reports them at the end
 - preserves project entries that still cannot be refreshed safely and reports them at the end
@@ -367,6 +435,8 @@ mcpkit edit
 mcpkit edit --claude
 mcpkit edit --codex
 mcpkit edit --opencode
+mcpkit edit --gemini
+mcpkit edit --cursor
 ```
 
 Input format:
@@ -374,6 +444,8 @@ Input format:
 - Claude: JSON server definition
 - Codex: TOML `[mcp_servers.<name>]` definition
 - OpenCode: JSON server entry
+- Gemini: JSON server entry
+- Cursor: JSON server entry (must include `"type": "stdio"` for command-based servers)
 
 #### `mcpkit remove`
 
@@ -384,9 +456,11 @@ mcpkit remove
 mcpkit remove --claude
 mcpkit remove --codex
 mcpkit remove --opencode
+mcpkit remove --gemini
+mcpkit remove --cursor
 ```
 
-For wrapper-backed servers, `remove` also deletes the per-server wrapper script when it is no longer referenced by any remaining Claude, Codex, or OpenCode project config in the current project.
+For wrapper-backed servers, `remove` also deletes the per-server wrapper script when it is no longer referenced by any remaining project config in the current project.
 
 #### `mcpkit list`
 
@@ -398,6 +472,8 @@ mcpkit list --verbose
 mcpkit list --claude
 mcpkit list --codex
 mcpkit list --opencode
+mcpkit list --gemini
+mcpkit list --cursor
 ```
 
 Behavior:
@@ -418,6 +494,8 @@ mcpkit registry add
 mcpkit registry add --claude
 mcpkit registry add --codex
 mcpkit registry add --opencode
+mcpkit registry add --gemini
+mcpkit registry add --cursor
 ```
 
 Behavior:
@@ -426,6 +504,8 @@ Behavior:
 - Claude: expects JSON
 - Codex: expects TOML
 - OpenCode: expects one JSON server entry
+- Gemini: expects one JSON server entry
+- Cursor: expects one JSON server entry (`"type": "stdio"` required for command-based servers)
 
 Wrapper generation is internal to `mcpkit`. Registry entries remain plain native MCP config, and `mcpkit` decides at project-emission time whether a selected server can be wrapped safely.
 
@@ -438,6 +518,8 @@ mcpkit registry remove
 mcpkit registry remove --claude
 mcpkit registry remove --codex
 mcpkit registry remove --opencode
+mcpkit registry remove --gemini
+mcpkit registry remove --cursor
 ```
 
 #### `mcpkit registry list`
@@ -450,25 +532,31 @@ mcpkit registry list --verbose
 mcpkit registry list --claude
 mcpkit registry list --codex
 mcpkit registry list --opencode
+mcpkit registry list --gemini
+mcpkit registry list --cursor
 ```
+
+Behavior:
+
+- no flags: show all registries automatically
 
 ## Implementation Docs
 
 - [Project MCP Wrapper Revised Plan](./docs/project-mcp-wrapper-revised-plan.md)
 - [Project MCP Wrapper Revised Implementation](./docs/project-mcp-wrapper-revised-implementation.md)
 
-Behavior:
-
-- no flags: show all registries automatically
-
 ## File Locations
 
 - Claude registry: `~/.mcpkit/mcp-servers.json`
 - Codex registry: `~/.mcpkit/codex-mcp-servers.toml`
 - OpenCode registry: `~/.mcpkit/opencode-mcp-servers.json`
+- Gemini registry: `~/.mcpkit/gemini-mcp-servers.json`
+- Cursor registry: `~/.mcpkit/cursor-mcp-servers.json`
 - Claude project config: `.mcp.json`
 - Codex project config: `.codex/config.toml`
 - OpenCode project config: `opencode.json`
+- Gemini project config: `.gemini/settings.json`
+- Cursor project config: `.cursor/mcp.json`
 
 ## Configuration Formats
 
@@ -584,9 +672,92 @@ Existing eligible direct OpenCode entries become wrapper-backed after you run `m
 
 First-pass OpenCode support targets `opencode.json`; `opencode.jsonc` is not modified.
 
+### Gemini CLI Registry Format
+
+File: `~/.mcpkit/gemini-mcp-servers.json`
+
+```json
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": ["@playwright/mcp@latest"]
+    },
+    "my-api-server": {
+      "command": "npx",
+      "args": ["-y", "@example/my-api-mcp"],
+      "env": {
+        "API_KEY": "${API_KEY}"
+      }
+    }
+  }
+}
+```
+
+Supported fields: `command`, `args`, `env`, `url`, `httpUrl`, `headers`, `cwd`, `timeout`, `trust`, `includeTools`, `excludeTools`.
+
+### Gemini CLI Project Format
+
+File: `.gemini/settings.json`
+
+```json
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": ["@playwright/mcp@latest"]
+    }
+  }
+}
+```
+
+`mcpkit` preserves unrelated existing keys in `.gemini/settings.json` (merge-on-write) and updates only the `mcpServers` section.
+
+### Cursor Registry Format
+
+File: `~/.mcpkit/cursor-mcp-servers.json`
+
+```json
+{
+  "mcpServers": {
+    "playwright": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["@playwright/mcp@latest"]
+    },
+    "my-remote-server": {
+      "url": "https://api.example.com/mcp",
+      "headers": {
+        "Authorization": "Bearer ${env:API_KEY}"
+      }
+    }
+  }
+}
+```
+
+Supported fields: `type`, `command`, `args`, `env`, `url`, `headers`, `envFile`, `auth`.
+
+Note: `"type": "stdio"` is required for command-based (stdio) Cursor servers.
+
+### Cursor Project Format
+
+File: `.cursor/mcp.json`
+
+```json
+{
+  "mcpServers": {
+    "playwright": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["@playwright/mcp@latest"]
+    }
+  }
+}
+```
+
 ## Common Workflows
 
-### Set up Claude, Codex, and OpenCode for a new project
+### Set up all targets for a new project
 
 ```bash
 cd my-project
@@ -594,6 +765,18 @@ mcpkit init
 ```
 
 Choose the targets when prompted, then select servers for each target in sequence.
+
+### Add only a Gemini CLI MCP server to an existing project
+
+```bash
+mcpkit add --gemini
+```
+
+### Add only a Cursor MCP server to an existing project
+
+```bash
+mcpkit add --cursor
+```
 
 ### Add only a Codex MCP server to an existing project
 
@@ -617,10 +800,10 @@ This re-reads the server names already present in the project config from the ma
 
 It also regenerates the current project's `.mcpkit/bin/load-env` from the union of env vars required by the wrapper-backed servers that are actually present in the project.
 
-### Edit a single Claude server directly
+### Edit a single Cursor server directly
 
 ```bash
-mcpkit edit --claude
+mcpkit edit --cursor
 ```
 
 ### Show all configured servers for all targets
@@ -629,16 +812,16 @@ mcpkit edit --claude
 mcpkit list
 ```
 
-### Show verbose Codex registry details
+### Show verbose Gemini CLI registry details
 
 ```bash
-mcpkit registry list --codex --verbose
+mcpkit registry list --gemini --verbose
 ```
 
-### Show verbose OpenCode registry details
+### Show verbose Cursor registry details
 
 ```bash
-mcpkit registry list --opencode --verbose
+mcpkit registry list --cursor --verbose
 ```
 
 ## Troubleshooting
@@ -651,24 +834,12 @@ Run:
 mcpkit init --claude
 ```
 
-or:
-
-```bash
-mcpkit init
-```
-
 ### "No .codex/config.toml found in current directory"
 
 Run:
 
 ```bash
 mcpkit init --codex
-```
-
-or:
-
-```bash
-mcpkit init
 ```
 
 ### "No opencode.json found in current directory"
@@ -679,20 +850,44 @@ Run:
 mcpkit init --opencode
 ```
 
-or:
+### "No .gemini/settings.json found in current directory"
+
+Run:
 
 ```bash
-mcpkit init
+mcpkit init --gemini
+```
+
+### "No .cursor/mcp.json found in current directory"
+
+Run:
+
+```bash
+mcpkit init --cursor
 ```
 
 ### "No MCP servers in registry"
 
-Add servers first:
+`mcpkit init` will scaffold an empty config file and remind you to add servers first. Add servers with:
 
 ```bash
 mcpkit registry add --claude
 mcpkit registry add --codex
 mcpkit registry add --opencode
+mcpkit registry add --gemini
+mcpkit registry add --cursor
+```
+
+### Cursor validation error: `STDIO servers require "type": "stdio" for Cursor`
+
+Cursor requires `"type": "stdio"` as the first field in command-based server entries:
+
+```json
+"my-server": {
+  "type": "stdio",
+  "command": "npx",
+  "args": ["-y", "my-mcp-package"]
+}
 ```
 
 ### Invalid JSON or TOML input
@@ -726,6 +921,8 @@ Check registry file and directory permissions:
 chmod 644 ~/.mcpkit/mcp-servers.json
 chmod 644 ~/.mcpkit/codex-mcp-servers.toml
 chmod 644 ~/.mcpkit/opencode-mcp-servers.json
+chmod 644 ~/.mcpkit/gemini-mcp-servers.json
+chmod 644 ~/.mcpkit/cursor-mcp-servers.json
 chmod 755 ~/.mcpkit
 ```
 
