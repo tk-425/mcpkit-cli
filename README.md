@@ -70,7 +70,7 @@ Generated runtime layout:
 Notes:
 
 - `.mcpkit/` is generated runtime state and `mcpkit` adds it to `.gitignore` through a managed block
-- `load-env` is a macOS-oriented first-pass helper for best-effort Keychain-backed env loading
+- `load-env` checks the shell environment first; if a var is already set (e.g. exported in `.zshrc`), it is used as-is. If not set, `load-env` falls back to macOS Keychain via `security find-generic-password`
 - `load-env` is derived from the env interpolation actually used by wrapper-backed servers in the current project
 - for Keychain-backed loading, the macOS Keychain item service name must match the env var exactly, for example `API_KEY`
 - per-server wrappers still validate required env vars before launching the underlying MCP command
@@ -97,7 +97,7 @@ How this maps at runtime:
 
 - account: your current macOS username (`$USER`)
 - service: the env var name, for example `API_KEY`
-- wrapper behavior: `.mcpkit/bin/load-env` tries Keychain first, exports `API_KEY` if found, then the per-server wrapper validates that `API_KEY` is set before launching the MCP server
+- wrapper behavior: `.mcpkit/bin/load-env` checks if `API_KEY` is already set in the shell environment; if not, it queries Keychain; the per-server wrapper then validates that `API_KEY` is set before launching the MCP server
 
 ### Example 1: stdio server using `${API_KEY}`
 
