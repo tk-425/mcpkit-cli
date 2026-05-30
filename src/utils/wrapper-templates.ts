@@ -74,6 +74,10 @@ fi`,
     ...(staticEnvExports ? [staticEnvExports, ''] : []),
     ...(forwardedEnvExports ? [forwardedEnvExports, ''] : []),
     ...(templatedEnvExports ? [templatedEnvExports, ''] : []),
+    // cd is placed here only when returning the inner script directly (useLoadEnv: false),
+    // because $0 is the actual file path in that case. When load-env wraps the inner script
+    // via `zsh -c '...'`, $0 is "zsh" so script_dir would resolve incorrectly inside the inner script.
+    ...(wrapperConfig.neutralCwd && wrapperConfig.useLoadEnv === false ? ['cd "$HOME"', ''] : []),
     `exec ${commandParts.join(' ')}`,
     '',
   ];
@@ -84,12 +88,14 @@ fi`,
     return innerScript;
   }
 
+  const neutralCwdLine = wrapperConfig.neutralCwd ? '\ncd "$HOME"\n' : '';
+
   return `#!/bin/zsh
 set -euo pipefail
 
 script_dir="$(CDPATH= cd -- "$(dirname "$0")" && pwd)"
 ${WRAPPER_LOAD_ENV_METADATA_PREFIX}${loadEnvNames.length > 0 ? ` ${loadEnvNames.join(' ')}` : ''}
-
+${neutralCwdLine}
 exec "$script_dir/load-env" zsh -c ${shellQuote(innerScript)}
 `;
 }

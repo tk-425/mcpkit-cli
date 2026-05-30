@@ -73,6 +73,7 @@ Notes:
 - `load-env` checks the shell environment first; if a var is already set (e.g. exported in `.zshrc`), it is used as-is. If not set, `load-env` falls back to macOS Keychain via `security find-generic-password`
 - `load-env` is derived from the env interpolation actually used by wrapper-backed servers in the current project
 - for Keychain-backed loading, the macOS Keychain item service name must match the env var exactly, for example `API_KEY`
+- `npx`-backed wrapper scripts change to `$HOME` before executing, so npm does not traverse up into the caller project and find a `package.json` with a conflicting package-manager policy
 - per-server wrappers still validate required env vars before launching the underlying MCP command
 - `mcpkit remove` cleans up unreferenced per-server wrappers conservatively, but does not remove `.mcpkit/` or the managed `.gitignore` block automatically in the first pass
 - `mcpkit edit` is not yet wrapper-aware; editing emitted wrapper-backed entries directly can drift from registry metadata

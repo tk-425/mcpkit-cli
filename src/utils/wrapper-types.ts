@@ -15,5 +15,6 @@ export interface WrapperConfig {
   forwardedEnv?: Record<string, string>;
   templatedEnv?: Record<string, string>;
   useLoadEnv?: boolean;
+  neutralCwd?: boolean;
   exec: WrapperExecConfig;
 }

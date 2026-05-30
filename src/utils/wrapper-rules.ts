@@ -122,6 +122,7 @@ function buildRemoteHttpWrapperConfig(
     scriptName: serverName,
     requiredEnv: findInterpolatedEnvNames(headers).sort(),
     useLoadEnv: true,
+    neutralCwd: true,
     exec: {
       command: 'npx',
       argTemplates: [
@@ -170,6 +171,7 @@ function buildGenericWrapperConfig(
     forwardedEnv: Object.keys(forwardedEnv).length > 0 ? forwardedEnv : undefined,
     templatedEnv: Object.keys(templatedEnv).length > 0 ? templatedEnv : undefined,
     useLoadEnv: true,
+    neutralCwd: normalized.command === 'npx',
     exec: {
       command: normalized.command!,
       argTemplates: normalized.args,
