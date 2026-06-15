@@ -33,6 +33,7 @@ tests/
 .qwen/
 .opencode/
 .cursor/
+.pip2p/
 .mcp.json
 opencode.json
 GEMINI.md
@@ -56,3 +57,5 @@ mcpkit
 .devflow/
 
 .devflow-archive/
+
+.pip2p/
