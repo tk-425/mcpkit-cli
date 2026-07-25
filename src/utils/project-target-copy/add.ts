@@ -37,14 +37,14 @@ const ADD_PROJECT_TARGET_COPY: Record<McpTarget, AddProjectTargetCopy> = {
     successMessage: (count) =>
       `\n✓ Added ${count} OpenCode server${count === 1 ? "" : "s"} to opencode.json`,
   },
-  gemini: {
-    selectionMessage: "Select Gemini CLI MCP servers to add to .gemini/settings.json:",
-    cancelledMessage: "No Gemini CLI servers selected. Cancelled.",
-    noAvailableMessage: "No new Gemini CLI servers available to add.",
-    noChangesMessage: "No Gemini CLI servers were added.",
-    skippedServersHeading: "Skipped Gemini CLI servers:",
+  agy: {
+    selectionMessage: "Select Antigravity CLI MCP servers to add to .agents/mcp_config.json:",
+    cancelledMessage: "No Antigravity CLI servers selected. Cancelled.",
+    noAvailableMessage: "No new Antigravity CLI servers available to add.",
+    noChangesMessage: "No Antigravity CLI servers were added.",
+    skippedServersHeading: "Skipped Antigravity CLI servers:",
     successMessage: (count) =>
-      `\n✓ Added ${count} Gemini server${count === 1 ? "" : "s"} to .gemini/settings.json`,
+      `\n✓ Added ${count} Antigravity server${count === 1 ? "" : "s"} to .agents/mcp_config.json`,
   },
   cursor: {
     selectionMessage: "Select Cursor MCP servers to add to .cursor/mcp.json:",

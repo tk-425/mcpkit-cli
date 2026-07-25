@@ -9,7 +9,7 @@ This skill is documentation-driven. It should not write to MCPKit home, mutate r
 - Claude Code
 - Codex CLI
 - OpenCode CLI
-- Gemini CLI
+- Antigravity CLI
 - Cursor
 
 ## Canonical MCP Server Entry
@@ -20,8 +20,8 @@ Normalize the selected source entry into one canonical shape before rendering ta
 - `transport`: `stdio`, `url`, or `unknown`.
 - `command`: a string command for stdio entries.
 - `args`: string array, defaulting to an empty array.
-- `url`: remote endpoint from `url` or Gemini `httpUrl`.
-- `env`: string record from Claude/Gemini/Cursor `env`, Codex `env`, or OpenCode `environment`.
+- `url`: remote endpoint from `url`; Antigravity uses native `serverUrl`.
+- `env`: string record from Claude/Antigravity/Cursor `env`, Codex `env`, or OpenCode `environment`.
 - `headers`: string record from `headers` or Codex `http_headers`.
 - `env_http_headers`: Codex string record for env-backed HTTP headers.
 - `cwd`: working directory from `cwd`.
@@ -57,12 +57,12 @@ The canonical model is an internal reasoning aid. Output must remain target-nati
 - `environment` maps to canonical `env`.
 - `headers`, `enabled`, `timeout`, and `oauth` should be retained for target-specific rendering or warnings.
 
-### Gemini CLI
+### Antigravity CLI
 
 - Source shape is one JSON entry keyed by the server name.
-- `command`, `args`, `env`, `url`, `httpUrl`, `headers`, `cwd`, `timeout`, `trust`, `includeTools`, and `excludeTools` can be read directly.
-- Treat `httpUrl` as canonical `url`; warn when rendering to targets that only document `url`.
-- Treat Gemini `trust`, `includeTools`, and `excludeTools` as target-specific extras for other targets.
+- Antigravity native fields are `command`, `args`, `env`, and `serverUrl`.
+- Treat Antigravity `serverUrl` as target-specific; translate only when rendering another target's documented remote field.
+- Do not invent Antigravity fields beyond its native MCP entry shape.
 
 ### Cursor
 
@@ -88,7 +88,7 @@ Rules:
 
 - For `stdio`, render `command`, optional `args`, optional `env`, optional `cwd` only as a warning unless the source already used a Claude-compatible field.
 - For URL entries, render `url` and optional `headers`.
-- Do not render Codex-only, OpenCode-only, Gemini-only, or Cursor-only extras silently.
+- Do not render Codex-only, OpenCode-only, Antigravity-only, or Cursor-only extras silently.
 
 ### Codex CLI
 
@@ -127,7 +127,7 @@ Rules:
 - Render `headers` for remote entries when values can be represented safely.
 - Warn for target-specific extras without OpenCode equivalents.
 
-### Gemini CLI
+### Antigravity CLI
 
 Render one JSON entry:
 
@@ -141,9 +141,9 @@ Render one JSON entry:
 Rules:
 
 - For `stdio`, render `command`, optional `args`, optional `env`, and optional `cwd`.
-- For URL entries, prefer `url` unless the source explicitly used Gemini `httpUrl`.
+- For Antigravity URL entries, preserve native `serverUrl`; use each other target's documented field only when rendering that target.
 - Render `headers` for URL entries when values can be represented safely.
-- Warn for target-specific extras without Gemini equivalents.
+- Warn for target-specific extras without Antigravity equivalents.
 
 ### Cursor
 
@@ -171,7 +171,7 @@ When a value is a pure or embedded env placeholder, render it in the selected ta
 - Claude Code: `${VAR}`
 - Codex CLI: `${VAR}`
 - OpenCode CLI: `{env:VAR}`
-- Gemini CLI: `${VAR}`
+- Antigravity CLI: `${VAR}`
 - Cursor: `${env:VAR}`
 
 Normalize these source forms as references to the same env name:
@@ -189,11 +189,11 @@ Warnings are part of the output. Use them instead of silently forcing unsupporte
 Warn when:
 
 - A source field has no documented equivalent in the selected target.
-- A field is target-specific, such as Codex `enabled_tools`, OpenCode `oauth`, Gemini `trust`, or Cursor `auth`.
+- A field is target-specific, such as Codex `enabled_tools`, OpenCode `oauth`, or Cursor `auth`.
 - A remote/http entry carries auth or env injection that cannot be represented safely in the selected target.
 - Codex `bearer_token_env_var` or `env_http_headers` would need conversion to a target with no equivalent documented field.
-- Gemini `httpUrl` is rendered to a target that only documents `url`.
-- A source JSON shape is ambiguous across Claude Code, Gemini CLI, Cursor, or general MCP examples and the user has not selected the source supported agent.
+- Antigravity `serverUrl` is rendered to a target that only documents `url`.
+- A source JSON shape is ambiguous across Claude Code, Antigravity CLI, Cursor, or general MCP examples and the user has not selected the source supported agent.
 - A command-array source is rendered to a target that expects a string command plus args.
 - Unknown fields are present and not covered by target rendering rules.
 

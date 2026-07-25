@@ -1,12 +1,12 @@
 import type { CodexMcpServerConfig } from './codex-config.js';
 import type { OpenCodeMcpServerConfig } from './opencode-config.js';
-import type { GeminiMcpServerConfig } from './gemini-config.js';
+import type { AgyMcpServerConfig } from './agy-config.js';
 import type { CursorMcpServerConfig } from './cursor-config.js';
 import { hasInterpolatedEnv, findInterpolatedEnvNames, isPureEnvReference, normalizeEnvSyntax } from './interpolation.js';
 import type { ServerConfig } from './registry.js';
 import type { WrapperConfig } from './wrapper-types.js';
 
-type NativeConfig = ServerConfig | CodexMcpServerConfig | OpenCodeMcpServerConfig | GeminiMcpServerConfig | CursorMcpServerConfig;
+type NativeConfig = ServerConfig | CodexMcpServerConfig | OpenCodeMcpServerConfig | AgyMcpServerConfig | CursorMcpServerConfig;
 
 export interface WrapperResolution {
   kind: 'direct' | 'wrap' | 'skip';
@@ -28,14 +28,14 @@ function normalizeCommand(config: NativeConfig): { command?: string; args: strin
     return {
       command,
       args: [...commandArgs, ...args],
-      url: config.url,
+      url: 'serverUrl' in config ? config.serverUrl : (config as { url?: string }).url,
     };
   }
 
   return {
     command: config.command,
     args,
-    url: config.url,
+    url: 'serverUrl' in config ? config.serverUrl : (config as { url?: string }).url,
   };
 }
 
@@ -182,7 +182,7 @@ function buildGenericWrapperConfig(
 function resolveCommon(
   serverName: string,
   config: NativeConfig,
-  targetLabel: 'Claude Code' | 'Codex CLI' | 'OpenCode CLI' | 'Gemini CLI' | 'Cursor',
+  targetLabel: 'Claude Code' | 'Codex CLI' | 'OpenCode CLI' | 'Antigravity CLI' | 'Cursor',
 ): WrapperResolution {
   const normalized = normalizeCommand(config);
   const usesInterpolation = hasInterpolatedEnv(config);
@@ -254,11 +254,11 @@ export function resolveOpenCodeWrapperConfig(
   return resolveCommon(serverName, config, 'OpenCode CLI');
 }
 
-export function resolveGeminiWrapperConfig(
+export function resolveAgyWrapperConfig(
   serverName: string,
-  config: GeminiMcpServerConfig,
+  config: AgyMcpServerConfig,
 ): WrapperResolution {
-  return resolveCommon(serverName, config, 'Gemini CLI');
+  return resolveCommon(serverName, config, 'Antigravity CLI');
 }
 
 export function resolveCursorWrapperConfig(

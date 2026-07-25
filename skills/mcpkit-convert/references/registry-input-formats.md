@@ -7,7 +7,7 @@ Supported agents:
 - Claude Code
 - Codex CLI
 - OpenCode CLI
-- Gemini CLI
+- Antigravity CLI
 - Cursor
 
 ## Shared Rules
@@ -159,9 +159,9 @@ OpenCode full-config wrappers are rejected:
 - input containing `$schema`
 - input shaped like `{ "mcp": { ... } }` instead of one server entry
 
-## Gemini CLI
+## Antigravity CLI
 
-`mcpkit registry add --gemini` accepts one JSON entry keyed by the server name.
+`mcpkit registry add --agy` accepts one JSON entry keyed by the server name.
 
 Stdio Registry input:
 
@@ -184,26 +184,18 @@ HTTP URL Registry input:
 
 ```json
 "remote": {
-  "httpUrl": "https://api.example.com/mcp"
+  "serverUrl": "https://api.example.com/mcp"
 }
 ```
 
 Accepted fields include:
 
 - `command`: string
-- `url`: string
-- `httpUrl`: string
 - `args`: array of strings
 - `env`: object with string values
-- `headers`: object with string values
-- `cwd`: string
-- `timeout`: non-negative number
-- `trust`: boolean
-- `includeTools`: array of strings
-- `excludeTools`: array of strings
-- additional fields are currently preserved by the Gemini config type
+- `serverUrl`: string (remote MCP endpoint)
 
-Gemini requires either `command`, `url`, or `httpUrl`.
+Antigravity requires either `command` or `serverUrl`.
 
 ## Cursor
 
@@ -247,7 +239,7 @@ Stop and ask for corrected input when:
 
 - The source contains multiple MCP server entries.
 - The source is a full registry or project config and cannot be reduced to exactly one MCP server entry.
-- The source supported agent is not one of Claude Code, Codex CLI, OpenCode CLI, Gemini CLI, or Cursor.
+- The source supported agent is not one of Claude Code, Codex CLI, OpenCode CLI, Antigravity CLI, or Cursor.
 - OpenCode input is a full `opencode.json` wrapper rather than one server entry.
 - Codex input does not contain exactly one `[mcp_servers.<name>]` table.
 - Required target fields are missing, such as OpenCode `type`, OpenCode local `command`, OpenCode remote `url`, or Cursor command `type: "stdio"`.

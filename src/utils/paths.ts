@@ -114,24 +114,24 @@ export function getProjectGitignorePath(): string {
 }
 
 /**
- * Get the path to the Gemini CLI project config directory (.gemini in current directory)
+ * Get the path to the Antigravity CLI project config directory (.agents in current directory)
  */
-export function getGeminiProjectDirPath(): string {
-  return join(process.cwd(), '.gemini');
+export function getAgyProjectDirPath(): string {
+  return join(process.cwd(), '.agents');
 }
 
 /**
- * Get the path to the Gemini CLI project config file (.gemini/settings.json in current directory)
+ * Get the path to the Antigravity CLI project config file (.agents/mcp_config.json in current directory)
  */
-export function getGeminiProjectConfigPath(): string {
-  return join(getGeminiProjectDirPath(), 'settings.json');
+export function getAgyProjectConfigPath(): string {
+  return join(getAgyProjectDirPath(), 'mcp_config.json');
 }
 
 /**
- * Get the path to the Gemini registry file (~/.mcpkit/gemini-mcp-servers.json)
+ * Get the path to the Antigravity registry file (~/.mcpkit/agy-mcp-servers.json)
  */
-export function getGeminiRegistryPath(): string {
-  return join(getRegistryDir(), 'gemini-mcp-servers.json');
+export function getAgyRegistryPath(): string {
+  return join(getRegistryDir(), 'agy-mcp-servers.json');
 }
 
 /**

@@ -11,10 +11,10 @@ import {
   readOpenCodeProjectConfig,
 } from '../utils/opencode-config.js';
 import {
-  ensureGeminiMcpServers,
-  geminiProjectConfigExists,
-  readGeminiProjectConfig,
-} from '../utils/gemini-config.js';
+  ensureAgyMcpServers,
+  agyProjectConfigExists,
+  readAgyProjectConfig,
+} from '../utils/agy-config.js';
 import {
   ensureCursorMcpServers,
   cursorProjectConfigExists,
@@ -127,12 +127,12 @@ function renderOpenCodeSection(
   console.log(chalk.gray(`Total: ${serverNames.length} server${serverNames.length === 1 ? '' : 's'}`));
 }
 
-function renderGeminiSection(
+function renderAgySection(
   serverNames: string[],
-  projectConfig?: Awaited<ReturnType<typeof readGeminiProjectConfig>>,
+  projectConfig?: Awaited<ReturnType<typeof readAgyProjectConfig>>,
   verbose?: boolean,
 ): void {
-  console.log(chalk.blue('Gemini CLI Project MCP Servers (.gemini/settings.json):'));
+  console.log(chalk.blue('Antigravity CLI Project MCP Servers (.agents/mcp_config.json):'));
 
   if (!projectConfig) {
     console.log(chalk.yellow('  Not configured'));
@@ -144,7 +144,7 @@ function renderGeminiSection(
     return;
   }
 
-  const servers = ensureGeminiMcpServers(projectConfig);
+  const servers = ensureAgyMcpServers(projectConfig);
 
   if (verbose) {
     serverNames.forEach((name) => {
@@ -202,7 +202,7 @@ export async function listCommand(options: ListCommandOptions): Promise<void> {
     const showClaude = explicitTargets.length === 0 || explicitTargets.includes('claude');
     const showCodex = explicitTargets.length === 0 || explicitTargets.includes('codex');
     const showOpenCode = explicitTargets.length === 0 || explicitTargets.includes('opencode');
-    const showGemini = explicitTargets.length === 0 || explicitTargets.includes('gemini');
+    const showAgy = explicitTargets.length === 0 || explicitTargets.includes('agy');
     const showCursor = explicitTargets.length === 0 || explicitTargets.includes('cursor');
 
     if (showClaude) {
@@ -252,24 +252,24 @@ export async function listCommand(options: ListCommandOptions): Promise<void> {
       }
     }
 
-    if ((showClaude || showCodex || showOpenCode) && showGemini) {
+    if ((showClaude || showCodex || showOpenCode) && showAgy) {
       console.log();
     }
 
-    if (showGemini) {
-      if (geminiProjectConfigExists()) {
-        const projectConfig = await readGeminiProjectConfig();
-        renderGeminiSection(
-          Object.keys(ensureGeminiMcpServers(projectConfig)).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })),
+    if (showAgy) {
+      if (agyProjectConfigExists()) {
+        const projectConfig = await readAgyProjectConfig();
+        renderAgySection(
+          Object.keys(ensureAgyMcpServers(projectConfig)).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })),
           projectConfig,
           options.verbose,
         );
       } else {
-        renderGeminiSection([], undefined, options.verbose);
+        renderAgySection([], undefined, options.verbose);
       }
     }
 
-    if ((showClaude || showCodex || showOpenCode || showGemini) && showCursor) {
+    if ((showClaude || showCodex || showOpenCode || showAgy) && showCursor) {
       console.log();
     }
 
