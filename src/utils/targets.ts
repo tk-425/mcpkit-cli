@@ -1,4 +1,4 @@
-export const TARGETS = ['claude', 'codex', 'opencode', 'gemini', 'cursor'] as const;
+export const TARGETS = ['claude', 'codex', 'opencode', 'agy', 'cursor'] as const;
 
 export type McpTarget = typeof TARGETS[number];
 
@@ -6,7 +6,7 @@ export interface TargetOptions {
   claude?: boolean;
   codex?: boolean;
   opencode?: boolean;
-  gemini?: boolean;
+  agy?: boolean;
   cursor?: boolean;
 }
 
@@ -29,8 +29,8 @@ export function getExplicitTargets(options: TargetOptions): McpTarget[] {
     targets.push('opencode');
   }
 
-  if (options.gemini) {
-    targets.push('gemini');
+  if (options.agy) {
+    targets.push('agy');
   }
 
   if (options.cursor) {

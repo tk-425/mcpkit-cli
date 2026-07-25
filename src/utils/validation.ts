@@ -1,7 +1,7 @@
 import type { ServerConfig } from './registry.js';
 import type { CodexMcpServerConfig } from './codex-config.js';
 import type { OpenCodeMcpServerConfig } from './opencode-config.js';
-import type { GeminiMcpServerConfig } from './gemini-config.js';
+import type { AgyMcpServerConfig } from './agy-config.js';
 import type { CursorMcpServerConfig } from './cursor-config.js';
 import { parseToml } from './toml.js';
 
@@ -477,18 +477,25 @@ export function parseCodexServerInput(
   return { name, config };
 }
 
-export function validateGeminiServerConfig(config: any): { valid: boolean; error?: string } {
+export function validateAgyServerConfig(config: any): { valid: boolean; error?: string } {
   if (typeof config !== 'object' || config === null || Array.isArray(config)) {
     return { valid: false, error: 'Server configuration must be an object' };
   }
 
   const hasCommand = config.command !== undefined;
-  const hasUrl = config.url !== undefined || config.httpUrl !== undefined;
+  const hasServerUrl = config.serverUrl !== undefined;
 
-  if (!hasCommand && !hasUrl) {
+  if (hasCommand && hasServerUrl) {
     return {
       valid: false,
-      error: 'Gemini server configuration must include either a "command" field (stdio) or "url"/"httpUrl" field (HTTP)',
+      error: 'Antigravity server configuration must use either "command" or "serverUrl", not both',
+    };
+  }
+
+  if (!hasCommand && !hasServerUrl) {
+    return {
+      valid: false,
+      error: 'Antigravity server configuration must include either a "command" field (stdio) or "serverUrl" field (HTTP)',
     };
   }
 
@@ -496,12 +503,14 @@ export function validateGeminiServerConfig(config: any): { valid: boolean; error
     return { valid: false, error: '"command" field must be a string' };
   }
 
-  if (config.url !== undefined && typeof config.url !== 'string') {
-    return { valid: false, error: '"url" field must be a string' };
+  if (config.serverUrl !== undefined && typeof config.serverUrl !== 'string') {
+    return { valid: false, error: '"serverUrl" field must be a string' };
   }
 
-  if (config.httpUrl !== undefined && typeof config.httpUrl !== 'string') {
-    return { valid: false, error: '"httpUrl" field must be a string' };
+  for (const field of ['url', 'httpUrl', 'headers', 'cwd', 'timeout', 'trust', 'includeTools', 'excludeTools']) {
+    if (config[field] !== undefined) {
+      return { valid: false, error: `"${field}" field is not supported by Antigravity CLI` };
+    }
   }
 
   if (config.args !== undefined) {
@@ -514,39 +523,13 @@ export function validateGeminiServerConfig(config: any): { valid: boolean; error
     if (!result.valid) return result;
   }
 
-  if (config.headers !== undefined) {
-    const result = validateStringRecord(config.headers, 'headers');
-    if (!result.valid) return result;
-  }
-
-  if (config.cwd !== undefined && typeof config.cwd !== 'string') {
-    return { valid: false, error: '"cwd" field must be a string' };
-  }
-
-  if (config.timeout !== undefined && (typeof config.timeout !== 'number' || !Number.isFinite(config.timeout) || config.timeout < 0)) {
-    return { valid: false, error: '"timeout" field must be a non-negative number' };
-  }
-
-  if (config.trust !== undefined && typeof config.trust !== 'boolean') {
-    return { valid: false, error: '"trust" field must be a boolean' };
-  }
-
-  if (config.includeTools !== undefined) {
-    const result = validateStringArray(config.includeTools, 'includeTools');
-    if (!result.valid) return result;
-  }
-
-  if (config.excludeTools !== undefined) {
-    const result = validateStringArray(config.excludeTools, 'excludeTools');
-    if (!result.valid) return result;
-  }
 
   return { valid: true };
 }
 
-export function parseGeminiServerInput(
+export function parseAgyServerInput(
   input: string,
-): { name: string; config: GeminiMcpServerConfig } {
+): { name: string; config: AgyMcpServerConfig } {
   let cleaned = input.trim();
 
   if (!cleaned) {
@@ -582,13 +565,13 @@ export function parseGeminiServerInput(
     throw new Error(nameValidation.error);
   }
 
-  const configValidation = validateGeminiServerConfig(config);
+  const configValidation = validateAgyServerConfig(config);
 
   if (!configValidation.valid) {
     throw new Error(configValidation.error);
   }
 
-  return { name: name as string, config: config as GeminiMcpServerConfig };
+  return { name: name as string, config: config as AgyMcpServerConfig };
 }
 
 export function validateCursorServerConfig(config: any): { valid: boolean; error?: string } {

@@ -12,7 +12,7 @@ Use this skill when a user wants equivalent mcpkit Registry input for an MCP ser
 - Claude Code
 - Codex CLI
 - OpenCode CLI
-- Gemini CLI
+- Antigravity CLI
 - Cursor
 
 ## Required Questions
@@ -45,4 +45,4 @@ Do not run interactive `mcpkit` commands. Do not write to MCPKit home, project c
 - Produce Registry input only, not full registry files or project runtime config.
 - Preserve one MCP server entry per invocation.
 - Include warnings for unsupported, unknown, ambiguous, or lossy mappings.
-- Keep target choices explicit. `all` means Claude Code, Codex CLI, OpenCode CLI, Gemini CLI, and Cursor.
+- Keep target choices explicit. `all` means Claude Code, Codex CLI, OpenCode CLI, Antigravity CLI, and Cursor.

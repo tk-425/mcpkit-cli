@@ -57,19 +57,19 @@ const INIT_PROJECT_TARGET_COPY: Record<McpTarget, InitProjectTargetCopy> = {
     successMessage: (count) =>
       `\n✓ Updated opencode.json with ${count} OpenCode server${count === 1 ? "" : "s"}`,
   },
-  gemini: {
-    emptyRegistryMessage: "No Gemini CLI MCP servers in registry.",
+  agy: {
+    emptyRegistryMessage: "No Antigravity CLI MCP servers in registry.",
     emptyRegistryHint:
-      'Use "mcpkit registry add --gemini" to add servers to your registry first.',
-    mergePrompt: ".gemini/settings.json already exists. Do you want to merge with existing servers?",
-    overwritePrompt: "Overwrite MCP server entries in .gemini/settings.json?",
-    selectionMessage: "Select Gemini CLI MCP servers for .gemini/settings.json:",
-    cancelledMessage: "Gemini CLI init cancelled.",
-    noChangesMessage: "No Gemini CLI servers were added.",
-    selectedHeading: "Selected Gemini CLI servers:",
-    skippedServersHeading: "Skipped Gemini CLI servers:",
+      'Use "mcpkit registry add --agy" to add servers to your registry first.',
+    mergePrompt: ".agents/mcp_config.json already exists. Do you want to merge with existing servers?",
+    overwritePrompt: "Overwrite MCP server entries in .agents/mcp_config.json?",
+    selectionMessage: "Select Antigravity CLI MCP servers for .agents/mcp_config.json:",
+    cancelledMessage: "Antigravity CLI init cancelled.",
+    noChangesMessage: "No Antigravity CLI servers were added.",
+    selectedHeading: "Selected Antigravity CLI servers:",
+    skippedServersHeading: "Skipped Antigravity CLI servers:",
     successMessage: (count) =>
-      `\n✓ Updated .gemini/settings.json with ${count} Gemini server${count === 1 ? "" : "s"}`,
+      `\n✓ Updated .agents/mcp_config.json with ${count} Antigravity server${count === 1 ? "" : "s"}`,
   },
   cursor: {
     emptyRegistryMessage: "No Cursor MCP servers in registry.",

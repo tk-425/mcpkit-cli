@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import { readRegistry } from '../utils/registry.js';
 import { readCodexRegistry, ensureCodexMcpServers } from '../utils/codex-config.js';
 import { ensureOpenCodeMcpServers, readOpenCodeRegistry } from '../utils/opencode-config.js';
-import { ensureGeminiMcpServers, readGeminiRegistry } from '../utils/gemini-config.js';
+import { ensureAgyMcpServers, readAgyRegistry } from '../utils/agy-config.js';
 import { ensureCursorMcpServers, readCursorRegistry } from '../utils/cursor-config.js';
 import { getExplicitTargets, type TargetOptions } from '../utils/targets.js';
 
@@ -96,19 +96,19 @@ function renderOpenCodeRegistry(
   console.log(chalk.gray(`Total: ${serverNames.length} server${serverNames.length === 1 ? '' : 's'}`));
 }
 
-function renderGeminiRegistry(
+function renderAgyRegistry(
   serverNames: string[],
-  registry: Awaited<ReturnType<typeof readGeminiRegistry>>,
+  registry: Awaited<ReturnType<typeof readAgyRegistry>>,
   verbose?: boolean,
 ): void {
-  console.log(chalk.blue('Gemini CLI Registry (~/.mcpkit/gemini-mcp-servers.json):'));
+  console.log(chalk.blue('Antigravity CLI Registry (~/.mcpkit/agy-mcp-servers.json):'));
 
   if (serverNames.length === 0) {
     console.log(chalk.yellow('  No MCP servers configured'));
     return;
   }
 
-  const servers = ensureGeminiMcpServers(registry);
+  const servers = ensureAgyMcpServers(registry);
 
   if (verbose) {
     serverNames.forEach((name) => {
@@ -161,7 +161,7 @@ export async function registryListCommand(options: RegistryListCommandOptions): 
     const showClaude = explicitTargets.length === 0 || explicitTargets.includes('claude');
     const showCodex = explicitTargets.length === 0 || explicitTargets.includes('codex');
     const showOpenCode = explicitTargets.length === 0 || explicitTargets.includes('opencode');
-    const showGemini = explicitTargets.length === 0 || explicitTargets.includes('gemini');
+    const showAgy = explicitTargets.length === 0 || explicitTargets.includes('agy');
     const showCursor = explicitTargets.length === 0 || explicitTargets.includes('cursor');
 
     if (showClaude) {
@@ -195,20 +195,20 @@ export async function registryListCommand(options: RegistryListCommandOptions): 
       );
     }
 
-    if ((showClaude || showCodex || showOpenCode) && showGemini) {
+    if ((showClaude || showCodex || showOpenCode) && showAgy) {
       console.log();
     }
 
-    if (showGemini) {
-      const registry = await readGeminiRegistry();
-      renderGeminiRegistry(
-        Object.keys(ensureGeminiMcpServers(registry)).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })),
+    if (showAgy) {
+      const registry = await readAgyRegistry();
+      renderAgyRegistry(
+        Object.keys(ensureAgyMcpServers(registry)).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })),
         registry,
         options.verbose,
       );
     }
 
-    if ((showClaude || showCodex || showOpenCode || showGemini) && showCursor) {
+    if ((showClaude || showCodex || showOpenCode || showAgy) && showCursor) {
       console.log();
     }
 

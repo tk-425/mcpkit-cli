@@ -30,12 +30,12 @@ const EDIT_PROJECT_TARGET_COPY: Record<McpTarget, EditProjectTargetCopy> = {
     instruction: "  1. Edit the OpenCode JSON server entry",
     successMessage: (name) => `✓ Updated "${name}" in opencode.json`,
   },
-  gemini: {
-    selectionMessage: "Choose a Gemini CLI server to edit:",
-    emptyMessage: "No Gemini CLI MCP servers found in .gemini/settings.json",
-    inputMessage: "Edit Gemini server configuration (save and exit to confirm):",
+  agy: {
+    selectionMessage: "Choose an Antigravity CLI server to edit:",
+    emptyMessage: "No Antigravity CLI MCP servers found in .agents/mcp_config.json",
+    inputMessage: "Edit Antigravity server configuration (save and exit to confirm):",
     instruction: "  1. Edit the JSON configuration",
-    successMessage: (name) => `✓ Updated "${name}" in .gemini/settings.json`,
+    successMessage: (name) => `✓ Updated "${name}" in .agents/mcp_config.json`,
   },
   cursor: {
     selectionMessage: "Choose a Cursor server to edit:",

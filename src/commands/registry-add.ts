@@ -13,9 +13,9 @@ import {
   serverExistsInOpenCodeRegistry,
 } from "../utils/opencode-config.js";
 import {
-  addServerToGeminiRegistry,
-  serverExistsInGeminiRegistry,
-} from "../utils/gemini-config.js";
+  addServerToAgyRegistry,
+  serverExistsInAgyRegistry,
+} from "../utils/agy-config.js";
 import {
   addServerToCursorRegistry,
   serverExistsInCursorRegistry,
@@ -24,7 +24,7 @@ import {
   parseCodexServerInput,
   parseOpenCodeServerInput,
   parseServerInput,
-  parseGeminiServerInput,
+  parseAgyServerInput,
   parseCursorServerInput,
 } from "../utils/validation.js";
 import type { TargetOptions } from "../utils/targets.js";
@@ -53,8 +53,8 @@ export async function registryAddCommand(options: TargetOptions): Promise<void> 
             ? "  1. Paste your single Codex TOML [mcp_servers.<name>] configuration"
             : target === "opencode"
               ? "  1. Paste your single OpenCode JSON server entry"
-              : target === "gemini"
-                ? "  1. Paste your single Gemini CLI JSON server entry"
+              : target === "agy"
+                ? "  1. Paste your single Antigravity CLI JSON server entry"
                 : "  1. Paste your single Cursor JSON server entry",
       ),
     );
@@ -86,7 +86,7 @@ export async function registryAddCommand(options: TargetOptions): Promise<void> 
       console.log(chalk.gray('      "CONTEXT7_API_KEY": "${CONTEXT_7_KEY}"'));
       console.log(chalk.gray('    }'));
       console.log(chalk.gray('  }'));
-    } else if (target === "gemini") {
+    } else if (target === "agy") {
       console.log(chalk.gray('  "playwright": {'));
       console.log(chalk.gray('    "command": "npx",'));
       console.log(chalk.gray('    "args": ["@playwright/mcp@latest"]'));
@@ -109,8 +109,8 @@ export async function registryAddCommand(options: TargetOptions): Promise<void> 
             ? "Enter Codex server configuration (paste TOML and save):"
             : target === "opencode"
               ? "Enter OpenCode server configuration (paste JSON and save):"
-              : target === "gemini"
-                ? "Enter Gemini CLI server configuration (paste JSON and save):"
+              : target === "agy"
+                ? "Enter Antigravity CLI server configuration (paste JSON and save):"
                 : "Enter Cursor server configuration (paste JSON and save):",
       default: "",
       validate: (value) => {
@@ -124,8 +124,8 @@ export async function registryAddCommand(options: TargetOptions): Promise<void> 
             parseCodexServerInput(value);
           } else if (target === "opencode") {
             parseOpenCodeServerInput(value);
-          } else if (target === "gemini") {
-            parseGeminiServerInput(value);
+          } else if (target === "agy") {
+            parseAgyServerInput(value);
           } else {
             parseCursorServerInput(value);
           }
@@ -211,13 +211,13 @@ export async function registryAddCommand(options: TargetOptions): Promise<void> 
       return;
     }
 
-    if (target === "gemini") {
-      const { name, config } = parseGeminiServerInput(pastedInput);
-      const exists = await serverExistsInGeminiRegistry(name);
+    if (target === "agy") {
+      const { name, config } = parseAgyServerInput(pastedInput);
+      const exists = await serverExistsInAgyRegistry(name);
 
       if (exists) {
         const shouldOverwrite = await confirm({
-          message: `Server "${name}" already exists in Gemini registry. Overwrite?`,
+          message: `Server "${name}" already exists in Antigravity registry. Overwrite?`,
           default: false,
         });
 
@@ -227,10 +227,10 @@ export async function registryAddCommand(options: TargetOptions): Promise<void> 
         }
       }
 
-      await addServerToGeminiRegistry(name, config);
+      await addServerToAgyRegistry(name, config);
       console.log(
         chalk.green(
-          `✓ Added "${name}" to Gemini registry (~/.mcpkit/gemini-mcp-servers.json)`,
+          `✓ Added "${name}" to Antigravity registry (~/.mcpkit/agy-mcp-servers.json)`,
         ),
       );
       return;

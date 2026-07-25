@@ -1,6 +1,6 @@
 import type { CodexMcpServerConfig } from './codex-config.js';
 import type { OpenCodeMcpServerConfig } from './opencode-config.js';
-import type { GeminiMcpServerConfig } from './gemini-config.js';
+import type { AgyMcpServerConfig } from './agy-config.js';
 import type { CursorMcpServerConfig } from './cursor-config.js';
 import { ensureServerWrapper } from './project-runtime.js';
 import type { ServerConfig } from './registry.js';
@@ -8,7 +8,7 @@ import {
   resolveClaudeWrapperConfig,
   resolveCodexWrapperConfig,
   resolveOpenCodeWrapperConfig,
-  resolveGeminiWrapperConfig,
+  resolveAgyWrapperConfig,
   resolveCursorWrapperConfig,
 } from './wrapper-rules.js';
 
@@ -139,11 +139,11 @@ export async function emitOpenCodeProjectServer(
   };
 }
 
-export async function emitGeminiProjectServer(
+export async function emitAgyProjectServer(
   name: string,
-  config: GeminiMcpServerConfig,
-): Promise<EmitResult<GeminiMcpServerConfig>> {
-  const resolution = resolveGeminiWrapperConfig(name, config);
+  config: AgyMcpServerConfig,
+): Promise<EmitResult<AgyMcpServerConfig>> {
+  const resolution = resolveAgyWrapperConfig(name, config);
 
   if (resolution.kind === 'direct') {
     return { config, usedWrapper: false, skipped: false };
@@ -161,10 +161,7 @@ export async function emitGeminiProjectServer(
   const {
     args: _args,
     env: _env,
-    url: _url,
-    httpUrl: _httpUrl,
-    headers: _headers,
-    cwd: _cwd,
+    serverUrl: _serverUrl,
     ...rest
   } = config;
 

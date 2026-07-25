@@ -23,17 +23,17 @@ import {
   removeServerFromOpenCodeProject,
   writeOpenCodeProjectConfig,
 } from "./opencode-config.js";
-import type { GeminiConfigFile, GeminiMcpServerConfig } from "./gemini-config.js";
+import type { AgyConfigFile, AgyMcpServerConfig } from "./agy-config.js";
 import {
-  addServerToGeminiProject,
-  ensureGeminiMcpServers,
-  geminiProjectConfigExists,
-  readGeminiProjectConfig,
-  readGeminiProjectConfigOrDefault,
-  readGeminiRegistry,
-  removeServerFromGeminiProject,
-  writeGeminiProjectConfig,
-} from "./gemini-config.js";
+  addServerToAgyProject,
+  ensureAgyMcpServers,
+  agyProjectConfigExists,
+  readAgyProjectConfig,
+  readAgyProjectConfigOrDefault,
+  readAgyRegistry,
+  removeServerFromAgyProject,
+  writeAgyProjectConfig,
+} from "./agy-config.js";
 import type { CursorConfigFile, CursorMcpServerConfig } from "./cursor-config.js";
 import {
   addServerToCursorProject,
@@ -50,7 +50,7 @@ import {
   emitClaudeProjectServer,
   emitCodexProjectServer,
   emitOpenCodeProjectServer,
-  emitGeminiProjectServer,
+  emitAgyProjectServer,
   emitCursorProjectServer,
 } from "./project-emitter.js";
 import type { ProjectConfig } from "./project-config.js";
@@ -69,7 +69,7 @@ import {
   parseCodexServerInput,
   parseOpenCodeServerInput,
   parseServerInput,
-  parseGeminiServerInput,
+  parseAgyServerInput,
   parseCursorServerInput,
 } from "./validation.js";
 
@@ -181,31 +181,31 @@ const openCodeProjectAdapter: ProjectTargetAdapter<
   parseEditedServerInput: parseOpenCodeServerInput,
 };
 
-const geminiProjectAdapter: ProjectTargetAdapter<
-  GeminiConfigFile,
-  GeminiConfigFile,
-  GeminiMcpServerConfig
+const agyProjectAdapter: ProjectTargetAdapter<
+  AgyConfigFile,
+  AgyConfigFile,
+  AgyMcpServerConfig
 > = {
-  key: "gemini",
-  label: "Gemini CLI",
-  configPath: ".gemini/settings.json",
-  configExists: geminiProjectConfigExists,
-  readConfig: readGeminiProjectConfig,
-  readConfigOrDefault: readGeminiProjectConfigOrDefault,
-  writeConfig: writeGeminiProjectConfig,
+  key: "agy",
+  label: "Antigravity CLI",
+  configPath: ".agents/mcp_config.json",
+  configExists: agyProjectConfigExists,
+  readConfig: readAgyProjectConfig,
+  readConfigOrDefault: readAgyProjectConfigOrDefault,
+  writeConfig: writeAgyProjectConfig,
   createEmptyConfig: () => ({ mcpServers: {} }),
   resetServers: (config) => {
     config.mcpServers = {};
   },
-  getProjectServers: ensureGeminiMcpServers,
-  readRegistry: readGeminiRegistry,
-  getRegistryServers: ensureGeminiMcpServers,
-  emitProjectServer: emitGeminiProjectServer,
-  addServer: addServerToGeminiProject,
-  removeServer: removeServerFromGeminiProject,
+  getProjectServers: ensureAgyMcpServers,
+  readRegistry: readAgyRegistry,
+  getRegistryServers: ensureAgyMcpServers,
+  emitProjectServer: emitAgyProjectServer,
+  addServer: addServerToAgyProject,
+  removeServer: removeServerFromAgyProject,
   serializeServerForEdit: (name, config) =>
     JSON.stringify({ [name]: config }, null, 2),
-  parseEditedServerInput: parseGeminiServerInput,
+  parseEditedServerInput: parseAgyServerInput,
 };
 
 const cursorProjectAdapter: ProjectTargetAdapter<
@@ -239,7 +239,7 @@ export const PROJECT_TARGET_ADAPTERS = [
   claudeProjectAdapter,
   codexProjectAdapter,
   openCodeProjectAdapter,
-  geminiProjectAdapter,
+  agyProjectAdapter,
   cursorProjectAdapter,
 ] as const;
 
@@ -256,8 +256,8 @@ export function getProjectTargetAdapter(
   target: "opencode",
 ): ProjectTargetAdapter<OpenCodeConfigFile, OpenCodeConfigFile, OpenCodeMcpServerConfig>;
 export function getProjectTargetAdapter(
-  target: "gemini",
-): ProjectTargetAdapter<GeminiConfigFile, GeminiConfigFile, GeminiMcpServerConfig>;
+  target: "agy",
+): ProjectTargetAdapter<AgyConfigFile, AgyConfigFile, AgyMcpServerConfig>;
 export function getProjectTargetAdapter(
   target: "cursor",
 ): ProjectTargetAdapter<CursorConfigFile, CursorConfigFile, CursorMcpServerConfig>;
@@ -275,8 +275,8 @@ export function getProjectTargetAdapter(
     return codexProjectAdapter;
   }
 
-  if (target === "gemini") {
-    return geminiProjectAdapter;
+  if (target === "agy") {
+    return agyProjectAdapter;
   }
 
   if (target === "cursor") {

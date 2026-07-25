@@ -53,7 +53,7 @@ Manual command:
 mcpkit registry add --opencode
 ```
 
-Target: Gemini CLI
+Target: Antigravity CLI
 
 ```json
 "my-api-server": {
@@ -68,7 +68,7 @@ Target: Gemini CLI
 Manual command:
 
 ```bash
-mcpkit registry add --gemini
+mcpkit registry add --agy
 ```
 
 Target: Cursor
@@ -132,7 +132,7 @@ Manual command:
 mcpkit registry add --opencode
 ```
 
-Target: Gemini CLI
+Target: Antigravity CLI
 
 ```json
 "context7": {
@@ -143,7 +143,7 @@ Target: Gemini CLI
 Manual command:
 
 ```bash
-mcpkit registry add --gemini
+mcpkit registry add --agy
 ```
 
 Target: Cursor
