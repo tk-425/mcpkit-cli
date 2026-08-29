@@ -381,6 +381,24 @@ export function parseJSON(jsonString: string): { success: true; data: any } | { 
 }
 
 /**
+ * Parse a JSON file's contents with an actionable message on syntax errors.
+ */
+export function parseJsonFile<T>(content: string, fileLabel: string): T {
+  try {
+    return JSON.parse(content) as T;
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      throw new Error(
+        `Invalid JSON in ${fileLabel}\n` +
+          'Please fix the JSON syntax or delete the file to reset.',
+      );
+    }
+
+    throw error;
+  }
+}
+
+/**
  * Parse server input with flexible formatting and comprehensive validation
  */
 export function parseServerInput(input: string): { name: string; config: ServerConfig } {
