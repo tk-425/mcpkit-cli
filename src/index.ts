@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-import { readFileSync } from "node:fs";
 import { Command } from "commander";
 import chalk from "chalk";
 import { registryAddCommand } from "./commands/registry-add.js";
@@ -18,9 +17,11 @@ import { hooksRemoveCommand } from "./commands/hooks-remove.js";
 import { hooksListCommand } from "./commands/hooks-list.js";
 
 const program = new Command();
-const packageJson = JSON.parse(
-  readFileSync(new URL("../package.json", import.meta.url), "utf-8"),
-) as { version: string };
+
+// JSON import attributes: Bun bundles the file into compiled binaries, and
+// Node >=18.20 requires the attribute for JSON modules. tsc embeds the type
+// via resolveJsonModule (needs module: esnext).
+import packageJson from "../package.json" with { type: "json" };
 
 function withTargetOptions(command: Command): Command {
   return command
