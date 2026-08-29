@@ -168,3 +168,52 @@ export function getRegistryPath(): string {
 export function getProjectConfigPath(): string {
   return getClaudeProjectConfigPath();
 }
+
+/**
+ * Get the path to the Claude hook registry file (~/.mcpkit/claude-hooks.json)
+ */
+export function getClaudeHooksRegistryPath(): string {
+  return join(getRegistryDir(), 'claude-hooks.json');
+}
+
+/**
+ * Get the path to the Codex hook registry file (~/.mcpkit/codex-hooks.toml)
+ */
+export function getCodexHooksRegistryPath(): string {
+  return join(getRegistryDir(), 'codex-hooks.toml');
+}
+
+/**
+ * Get the path to the Antigravity hook registry file (~/.mcpkit/agy-hooks.json)
+ */
+export function getAgyHooksRegistryPath(): string {
+  return join(getRegistryDir(), 'agy-hooks.json');
+}
+
+/**
+ * Get the path to the Cursor hook registry file (~/.mcpkit/cursor-hooks.json)
+ */
+export function getCursorHooksRegistryPath(): string {
+  return join(getRegistryDir(), 'cursor-hooks.json');
+}
+
+/**
+ * Get the path to the Claude project settings file (.claude/settings.json in the current directory)
+ */
+export function getClaudeProjectSettingsPath(): string {
+  return join(process.cwd(), '.claude', 'settings.json');
+}
+
+/**
+ * Get the path to the Antigravity project hook file (.agents/hooks.json in the current directory)
+ */
+export function getAgyHooksProjectPath(): string {
+  return join(process.cwd(), '.agents', 'hooks.json');
+}
+
+/**
+ * Get the path to the Cursor project hook file (.cursor/hooks.json in the current directory)
+ */
+export function getCursorHooksProjectPath(): string {
+  return join(process.cwd(), '.cursor', 'hooks.json');
+}

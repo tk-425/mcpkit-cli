@@ -1,3 +1,25 @@
+# Agent config
+.agents/
+.claude/
+.codex/
+.opencode/
+.pi/
+AGENTS.md
+CLAUDE.md
+
+# Docs
+.docs/
+
+# Tool output
+graphify-out/
+.code-review-graph/
+.codegraph/
+
+# Tool config
+.mcp.json
+opencode.json
+.graphifyignore
+
 # Dependencies
 node_modules/
 .pnpm-store/
@@ -26,37 +48,27 @@ tests/
 
 # AI Agents
 .rulez/
-.claude/
-.agents/
-.codex/
 .gemini/
 .qwen/
-.opencode/
 .cursor/
-.pip2p/
-.mcp.json
-opencode.json
 GEMINI.md
 QWEN.md
-AGENTS.md
-CLAUDE.md
 CONTEXT.md
-
 
 # build
 mcpkit
-
-.codegraph/
-.docs/
 
 # BEGIN MCPKIT
 # mcpkit generated local MCP wrappers
 .mcpkit/
 # END MCPKIT
 
+# Workflow state
 .devflow/
-
 .devflow-archive/
+.pipeline/
+.pipeline-archive/
 
+# Tool state
 .pip2p/
 .firecrawl/

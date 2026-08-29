@@ -541,6 +541,77 @@ Behavior:
 
 - no flags: show all registries automatically
 
+### Managing agent hooks
+
+mcpkit manages lifecycle hooks (shell commands or MCP tool calls triggered by agent events) through per-platform **hook registries** in MCPKit home and per-project **project hook files**. Each saved unit is a **hook entry** — one event's matcher groups (Claude, Codex, Cursor) or one named group (Antigravity). **Hook apply** writes selected hook entries from a hook registry into a project hook file; **hook remove** removes them from the project only.
+
+#### `mcpkit hooks add`
+
+Paste one native hook entry into the selected platform's hook registry. The event and handler types are validated in-editor, `mcp_tool` server references are cross-checked against that platform's server registry, and an exact duplicate matcher group is rejected.
+
+```bash
+mcpkit hooks add
+mcpkit hooks add --claude
+mcpkit hooks add --codex
+mcpkit hooks add --agy
+mcpkit hooks add --cursor
+```
+
+#### `mcpkit hooks apply`
+
+Multi-select saved hook entries and apply them additively to the project hook file — refreshed in place by identity, with all other keys and unselected entries preserved; repeating the same selection produces identical file content.
+
+```bash
+mcpkit hooks apply
+mcpkit hooks apply --claude
+```
+
+#### `mcpkit hooks remove`
+
+Multi-select hook entries currently in the project hook file and remove them by identity. The hook registry is never modified; a later apply re-adds the same entry.
+
+```bash
+mcpkit hooks remove
+mcpkit hooks remove --claude
+```
+
+#### `mcpkit hooks list`
+
+Show each platform's project hook entries with the project hook file path in the header; `--registry` shows the MCPKit home hook registries instead.
+
+```bash
+mcpkit hooks list
+mcpkit hooks list --registry
+```
+
+#### Hook registry and project hook file paths
+
+- Claude hook registry: `~/.mcpkit/claude-hooks.json`
+- Codex hook registry: `~/.mcpkit/codex-hooks.toml`
+- Antigravity hook registry: `~/.mcpkit/agy-hooks.json`
+- Cursor hook registry: `~/.mcpkit/cursor-hooks.json`
+- Claude project hook file: `.claude/settings.json` (`hooks` key; model, permissions, and other settings keys are preserved)
+- Codex project hook file: `.codex/config.toml` (inline `[[hooks.<Event>]]` tables; `mcp_servers` and other keys are preserved)
+- Antigravity project hook file: `.agents/hooks.json` (named groups at the top level)
+- Cursor project hook file: `.cursor/hooks.json` (schema-v1 shape; the `version` field is preserved)
+
+OpenCode is excluded: it has no declarative hooks — hooks are configured through plugins (https://opencode.ai/docs/plugins/). An explicit `--opencode` flag on any hooks command prints this explanation and exits nonzero.
+
+#### Example workflow
+
+Add a hook entry to the Claude hook registry, apply it to the current project, then remove it from the project:
+
+```bash
+mcpkit hooks add --claude
+# paste: "Stop": [ { "matcher": "*", "hooks": [ { "type": "command", "command": "echo done" } ] } ]
+
+mcpkit hooks apply --claude
+# select the "Stop" entry — writes .claude/settings.json under "hooks"
+
+mcpkit hooks remove --claude
+# select "Stop" — removed from .claude/settings.json; the hook registry is untouched
+```
+
 ## Implementation Docs
 
 - [Project MCP Wrapper Revised Plan](./docs/project-mcp-wrapper-revised-plan.md)
